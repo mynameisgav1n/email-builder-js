@@ -28,15 +28,16 @@ export default function SamplesDrawer() {
           </Typography>
 
           <Stack alignItems="flex-start">
+            <SidebarButton href="#sample/default">Default Template</SidebarButton>
             <SidebarButton href="#">Empty</SidebarButton>
-            <SidebarButton href="#sample/welcome">Welcome email</SidebarButton>
-            <SidebarButton href="#sample/one-time-password">One-time passcode (OTP)</SidebarButton>
-            <SidebarButton href="#sample/reset-password">Reset password</SidebarButton>
-            <SidebarButton href="#sample/order-ecomerce">E-commerce receipt</SidebarButton>
-            <SidebarButton href="#sample/subscription-receipt">Subscription receipt</SidebarButton>
-            <SidebarButton href="#sample/reservation-reminder">Reservation reminder</SidebarButton>
-            <SidebarButton href="#sample/post-metrics-report">Post metrics</SidebarButton>
-            <SidebarButton href="#sample/respond-to-message">Respond to inquiry</SidebarButton>
+            <SidebarButton href="#sample/welcome">[Extra] Welcome email</SidebarButton>
+            <SidebarButton href="#sample/one-time-password">[Extra] One-time passcode (OTP)</SidebarButton>
+            <SidebarButton href="#sample/reset-password">[Extra] Reset password</SidebarButton>
+            <SidebarButton href="#sample/order-ecomerce">[Extra] E-commerce receipt</SidebarButton>
+            <SidebarButton href="#sample/subscription-receipt">[Extra] Subscription receipt</SidebarButton>
+            <SidebarButton href="#sample/reservation-reminder">[Extra] Reservation reminder</SidebarButton>
+            <SidebarButton href="#sample/post-metrics-report">[Extra] Post metrics</SidebarButton>
+            <SidebarButton href="#sample/respond-to-message">[Extra] Respond to inquiry</SidebarButton>
           </Stack>
 
           <Divider />
