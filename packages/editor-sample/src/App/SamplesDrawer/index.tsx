@@ -24,7 +24,7 @@ export default function SamplesDrawer() {
       <Stack spacing={3} py={1} px={2} width={SAMPLES_DRAWER_WIDTH} justifyContent="space-between" height="100%">
         <Stack spacing={2} sx={{ '& .MuiButtonBase-root': { width: '100%', justifyContent: 'flex-start' } }}>
           <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
-            IYNJ Email Builder2
+            IYNJ Email Builder3
           </Typography>
 
           <Stack alignItems="flex-start">
