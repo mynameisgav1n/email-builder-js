@@ -10,13 +10,13 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       textColor: '#242424',
       fontFamily: 'MODERN_SANS',
       childrenIds: [
-        'block-1709571212684',
-        'block-1709571234315',
-        'block-1731012642335',
+        'block_1709571212684',
+        'block_1709571234315',
+        'block_1731012642335',
       ],
     },
   },
-  'block-1709571212684': {
+  block_1709571212684: {
     type: 'Image',
     data: {
       style: {
@@ -37,7 +37,7 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       },
     },
   },
-  'block-1709571234315': {
+  block_1709571234315: {
     type: 'Text',
     data: {
       style: {
@@ -56,7 +56,7 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       },
     },
   },
-  'block-1731012642335': {
+  block_1731012642335: {
     type: 'Text',
     data: {
       style: {
