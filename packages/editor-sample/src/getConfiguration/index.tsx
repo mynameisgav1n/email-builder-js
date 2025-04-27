@@ -7,6 +7,7 @@ import RESET_PASSWORD from './sample/reset-password';
 import RESPOND_TO_MESSAGE from './sample/respond-to-message';
 import SUBSCRIPTION_RECEIPT from './sample/subscription-receipt';
 import WELCOME from './sample/welcome';
+import DEFAULT_TEMPLATE from './sample/default-template';
 
 export default function getConfiguration(template: string) {
   if (template.startsWith('#sample/')) {
