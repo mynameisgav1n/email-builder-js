@@ -52,7 +52,7 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       },
       props: {
         markdown: true,
-        text: 'Hey {{1.name}}! 👋\n\n',
+        text: 'Hey {{1.name}}! 👋',
       },
     },
   },
