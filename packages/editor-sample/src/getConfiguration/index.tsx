@@ -28,6 +28,8 @@ export default function getConfiguration(template: string) {
         return RESPOND_TO_MESSAGE;
       case 'subscription-receipt':
         return SUBSCRIPTION_RECEIPT;
+      case 'default-template':
+        return DEFAULT_TEMPLATE;
     }
   }
 
