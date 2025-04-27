@@ -49,11 +49,11 @@ const THEME = createTheme(BASE_THEME, {
       dark: darken(BRAND_RED, 0.15),
     },
     cadet: {
-      100: '#F9FAFB',
-      200: '#F2F5F7',
-      300: '#DCE4EA',
-      400: '#A8BBCA',
-      500: '#6A8BA4',
+      100: '#FFF9F6',
+      200: '#FFE9DB',
+      300: '#FFD1B3',
+      400: '#FFA873',
+      500: '#F47529',
     },
     highlight: {
       100: lighten(BRAND_YELLOW, 0.8),
