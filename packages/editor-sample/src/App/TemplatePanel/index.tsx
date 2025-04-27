@@ -111,12 +111,7 @@ export default function TemplatePanel() {
               </ToggleButton>
             </ToggleButtonGroup>
             <ShareButton />
-            <Tooltip title="Send">
-  <ToggleButton value="send">
-    Send
-  </ToggleButton>
-</Tooltip>
-
+            <SendButton />
           </Stack>
         </Stack>
         <ToggleInspectorPanelButton />
