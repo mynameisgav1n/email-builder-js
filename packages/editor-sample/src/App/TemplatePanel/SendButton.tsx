@@ -11,7 +11,7 @@ export default function SendButton() {
   const onClick = async () => {
     const html = renderToStaticMarkup(document, { rootBlockId: 'root' }); // ✅ Render full real HTML
     const encodedHtml = btoa(encodeURIComponent(html)); // ✅ Encode safely for URL
-    window.open(`https://inspireyouthnj.org/admin/blastemail?code=${encodedHtml}`, '_blank'); // ✅ Open the new tab
+    window.open(`https://inspireyouthnj.org/admin/blastemail?prefill_html=${encodedHtml}`, '_blank'); // ✅ Open the new tab
   };
 
   return (
