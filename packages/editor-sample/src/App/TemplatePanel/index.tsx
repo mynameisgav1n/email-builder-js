@@ -20,6 +20,7 @@ import ImportJson from './ImportJson';
 import JsonPanel from './JsonPanel';
 import MainTabsGroup from './MainTabsGroup';
 import ShareButton from './ShareButton';
+import SendButton from './SendButton';
 
 export default function TemplatePanel() {
   const document = useDocument();
@@ -110,6 +111,12 @@ export default function TemplatePanel() {
               </ToggleButton>
             </ToggleButtonGroup>
             <ShareButton />
+            <Tooltip title="Send">
+  <ToggleButton value="send">
+    Send
+  </ToggleButton>
+</Tooltip>
+
           </Stack>
         </Stack>
         <ToggleInspectorPanelButton />
