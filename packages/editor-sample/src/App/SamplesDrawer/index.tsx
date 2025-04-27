@@ -28,7 +28,7 @@ export default function SamplesDrawer() {
           </Typography>
 
           <Stack alignItems="flex-start">
-            <SidebarButton href="#sample/default">Default Template</SidebarButton>
+            <SidebarButton href="#sample/default-template">Default Template</SidebarButton>
             <SidebarButton href="#">Empty</SidebarButton>
             <SidebarButton href="#sample/welcome">[Extra] Welcome email</SidebarButton>
             <SidebarButton href="#sample/one-time-password">[Extra] One-time passcode (OTP)</SidebarButton>
