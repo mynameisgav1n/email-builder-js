@@ -8,12 +8,11 @@ import { renderToStaticMarkup } from '@usewaypoint/email-builder'; // ✅ Same a
 export default function SendButton() {
   const document = useDocument();
 
-const onClick = async () => {
-  const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
-  console.log('HTML OUTPUT:', html);
-  alert('Send button clicked!');
-};
-
+  const onClick = async () => {
+    const html = renderToStaticMarkup(document, { rootBlockId: 'root' }); // ✅ Render full real HTML
+    const encodedHtml = btoa(encodeURIComponent(html)); // ✅ Encode safely for URL
+    window.open(`https://inspireyouthnj.org/admin/blastemail?code=${encodedHtml}`, '_blank'); // ✅ Open the new tab
+  };
 
   return (
     <Tooltip title="Send email">
