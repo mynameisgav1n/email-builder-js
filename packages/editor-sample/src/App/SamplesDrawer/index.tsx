@@ -1,25 +1,21 @@
 import React from 'react';
 
 import { Box, Button, Divider, Drawer, Stack, Typography } from '@mui/material';
-import { useSamplesDrawerOpen, useDocument } from '../../documents/editor/EditorContext';
-import { renderToStaticMarkup } from '@usewaypoint/email-builder'; // ✅ Correct render method
+import { useSamplesDrawerOpen } from '../../documents/editor/EditorContext';
 
 import SidebarButton from './SidebarButton';
 import logo from './waypoint.svg';
 
 export const SAMPLES_DRAWER_WIDTH = 240;
 
-// Correct "send" function matching your SendButton
-async function sendEmail(document: any) {
-  const html = renderToStaticMarkup(document, { rootBlockId: 'root' }); // ✅ Real full HTML
-  const encodedHtml = btoa(encodeURIComponent(html)); // ✅ Encode safely
-  const url = `https://inspireyouthnj.org/admin/blastemail?prefill_html=${encodedHtml}`; // ✅ Correct query param
-  window.open(url, '_blank'); // ✅ Open in new tab
-}
-
 export default function SamplesDrawer() {
   const samplesDrawerOpen = useSamplesDrawerOpen();
-  const document = useDocument();
+
+  const handleSendEmailClick = () => {
+    const subject = encodeURIComponent('Email Builder Help Needed');
+    const body = encodeURIComponent(`Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below and I'll be more than happy to help you out as soon as I can!\n------`);
+    window.open(`mailto:gavin@inspireyouthnj.org?subject=${subject}&body=${body}`, '_blank');
+  };
 
   return (
     <Drawer
@@ -88,9 +84,9 @@ export default function SamplesDrawer() {
             variant="contained"
             color="primary"
             sx={{ justifyContent: 'center' }}
-            onClick={() => sendEmail(document)} // ✅ Correct Send behavior
+            onClick={handleSendEmailClick} // ✅ triggers mailto
           >
-            Send this blast email
+            Send email
           </Button>
         </Stack>
       </Stack>
