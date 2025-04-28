@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SaveAltOutlined } from '@mui/icons-material';
+import { SaveOutlined } from '@mui/icons-material';
 import { IconButton, Snackbar, Tooltip } from '@mui/material';
 
 import { useDocument } from '../../documents/editor/EditorContext';
@@ -10,11 +10,9 @@ export default function SaveButton() {
 
   const onClick = async () => {
     try {
-      // Encode document as URL (same as Share button)
       const c = encodeURIComponent(JSON.stringify(document));
       const generatedUrl = `${window.location.origin}${window.location.pathname}#code/${btoa(c)}`;
 
-      // Now open the new tab with only the URL (no PNG)
       window.open(`https://inspireyouthnj.org/admin/myemails/submit?url=${encodeURIComponent(generatedUrl)}`, '_blank');
     } catch (error) {
       console.error('Failed to save:', error);
@@ -30,7 +28,7 @@ export default function SaveButton() {
     <>
       <Tooltip title="Save to My Emails">
         <IconButton onClick={onClick}>
-          <SaveAltOutlined fontSize="small" />
+          <SaveOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
       <Snackbar
