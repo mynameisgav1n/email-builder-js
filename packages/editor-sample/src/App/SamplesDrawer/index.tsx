@@ -13,7 +13,7 @@ export default function SamplesDrawer() {
 
   const handleSendEmailClick = () => {
     const subject = encodeURIComponent('Email Builder Help Needed');
-    const body = encodeURIComponent(`Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below and I'll be more than happy to help you out as soon as I can!\n------`);
+    const body = encodeURIComponent(`Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below the line and I'll be more than happy to help you out as soon as I can!\n------\n\n`);
     window.open(`mailto:gavin@inspireyouthnj.org?subject=${subject}&body=${body}`, '_blank');
   };
 
