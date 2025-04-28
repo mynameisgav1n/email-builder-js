@@ -27,24 +27,30 @@ export default function SendButton() {
     }
   };
 
-  const onClick = async () => {
-    const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
-    const minifiedHtml = minifyHTML(html);
-    const encodedHtml = encodeURIComponent(minifiedHtml);
+const onClick = async () => {
+  const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
+  const minifiedHtml = minifyHTML(html);
 
-    const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
-    const prefillUrl = `${baseUrl}?prefill_html=${encodedHtml}`;
+  const rawLength = minifiedHtml.length;
+  const MAX_RAW_HTML_LENGTH = 1400; // Safe limit for unencoded minified HTML
 
-    const MAX_URL_LENGTH = 1900; // Safe limit
+  const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
+  
+  if (rawLength > MAX_RAW_HTML_LENGTH) {
+    await copyToClipboard(minifiedHtml); // Copy raw HTML
+    alert(
+      'The HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the Blast Email form that will open in a new tab.'
+    );
+    window.open(baseUrl, '_blank');
+    return;
+  }
 
-    if (prefillUrl.length > MAX_URL_LENGTH) {
-      await copyToClipboard(minifiedHtml); // Copy raw (unencoded) HTML for easy pasting
-      alert(
-        'Your message was too large.\n\nThe HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the site that will open in a new tab.'
-      );
-      window.open(baseUrl, '_blank'); // Open the page without prefill
-      return;
-    }
+  // Otherwise safe to encode and open
+  const encodedHtml = encodeURIComponent(minifiedHtml);
+  const prefillUrl = `${baseUrl}?prefill_html=${encodedHtml}`;
+  window.open(prefillUrl, '_blank');
+};
+
 
     // Otherwise, safe to send with prefill
     window.open(prefillUrl, '_blank');
