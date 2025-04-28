@@ -43,7 +43,7 @@ const onClick = async () => {
     );
     window.open(baseUrl, '_blank');
     return;
-  }
+  };
 
   // Otherwise safe to encode and open
   const encodedHtml = encodeURIComponent(minifiedHtml);
