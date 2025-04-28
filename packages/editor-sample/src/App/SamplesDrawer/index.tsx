@@ -24,13 +24,19 @@ export default function SamplesDrawer() {
       <Stack spacing={3} py={1} px={2} width={SAMPLES_DRAWER_WIDTH} justifyContent="space-between" height="100%">
         <Stack spacing={2} sx={{ '& .MuiButtonBase-root': { width: '100%', justifyContent: 'flex-start' } }}>
 
-          <Box display="flex" justifyContent="center" alignItems="center">
-            <img 
-              src="https://static.iynj.org/fullLogo.png" 
-              alt="Inspire Youth NJ Logo" 
-              style={{ width: '80%', maxWidth: 150, marginBottom: 8 }} 
-            />
-          </Box>
+          <Box 
+  display="flex" 
+  justifyContent="center" 
+  alignItems="center"
+  sx={{ pt: 2 }}  // <<< added padding-top
+>
+  <img 
+    src="https://static.iynj.org/fullLogo.png" 
+    alt="Inspire Youth NJ Logo" 
+    style={{ width: '80%', maxWidth: 150, marginBottom: 8 }} 
+  />
+</Box>
+
           
           <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
             IYNJ Email Builder
