@@ -2,19 +2,19 @@ import React from 'react';
 
 import { Box, Button, Divider, Drawer, Stack, Typography } from '@mui/material';
 import { useSamplesDrawerOpen, useDocument } from '../../documents/editor/EditorContext';
-import { renderToStaticMarkup } from '@usewaypoint/email-builder';
+import { renderToStaticMarkup } from '@usewaypoint/email-builder'; // ✅ Correct render method
 
 import SidebarButton from './SidebarButton';
 import logo from './waypoint.svg';
 
 export const SAMPLES_DRAWER_WIDTH = 240;
 
-// Function to send the email by opening the Inspire Youth URL
+// Correct "send" function matching your SendButton
 async function sendEmail(document: any) {
-  const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
-  const encodedHtml = encodeURIComponent(html);
-  const url = `https://inspireyouthnj.org/admin/blastemail?code=${encodedHtml}`;
-  window.open(url, '_blank');
+  const html = renderToStaticMarkup(document, { rootBlockId: 'root' }); // ✅ Real full HTML
+  const encodedHtml = btoa(encodeURIComponent(html)); // ✅ Encode safely
+  const url = `https://inspireyouthnj.org/admin/blastemail?prefill_html=${encodedHtml}`; // ✅ Correct query param
+  window.open(url, '_blank'); // ✅ Open in new tab
 }
 
 export default function SamplesDrawer() {
@@ -37,7 +37,7 @@ export default function SamplesDrawer() {
             display="flex" 
             justifyContent="center" 
             alignItems="center"
-            sx={{ pt: 2 }} // Added padding-top
+            sx={{ pt: 2 }}
           >
             <img 
               src="https://static.iynj.org/fullLogo.png" 
@@ -74,6 +74,7 @@ export default function SamplesDrawer() {
             </Button>
           </Stack>
         </Stack>
+
         <Stack spacing={2} px={0.75} py={3}>
           <Box>
             <Typography variant="overline" gutterBottom>
@@ -87,7 +88,7 @@ export default function SamplesDrawer() {
             variant="contained"
             color="primary"
             sx={{ justifyContent: 'center' }}
-            onClick={() => sendEmail(document)} // <<<<< REAL Send behavior now
+            onClick={() => sendEmail(document)} // ✅ Correct Send behavior
           >
             Send email
           </Button>
