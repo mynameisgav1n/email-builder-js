@@ -39,7 +39,7 @@ export default function SendButton() {
 
     if (fullUrlLength > MAX_URL_LENGTH) {
       await copyToClipboard(minifiedHtml);
-      alert('Your message is too large. The email HTML code has been copied to your clipboard. Please paste it into the "Email Content" field on the Blast Email form that will open in a new tab.');
+      alert('The email HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the Blast Email form that will open in a new tab.');
       window.open(baseUrl, '_blank'); // Open page with no prefill
       return;
     }
