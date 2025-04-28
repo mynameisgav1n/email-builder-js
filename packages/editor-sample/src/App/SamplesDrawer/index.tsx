@@ -14,7 +14,7 @@ export default function SamplesDrawer() {
   const handleSendEmailClick = () => {
     const subject = encodeURIComponent('Email Builder Help Needed');
     const body = encodeURIComponent(`Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below the line and I'll be more than happy to help you out as soon as I can!\n------\n\n`);
-    window.open(`mailto:gavin@inspireyouthnj.org?subject=${subject}&body=${body}`, '_blank');
+    window.open(`mailto:tech@inspireyouthnj.org?subject=${subject}&body=${body}`, '_blank');
   };
 
   return (
@@ -77,7 +77,7 @@ export default function SamplesDrawer() {
               Need help?
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Contact Gavin at gavin@inspireyouthnj.org.
+              Contact Gavin at tech@inspireyouthnj.org.
             </Typography>
           </Box>
           <Button
