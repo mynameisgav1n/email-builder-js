@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IconButton, Tooltip, CircularProgress } from '@mui/material';
-import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'; // 🆕 New, better icon
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import { useDocument } from '../../documents/editor/EditorContext';
 import { renderToStaticMarkup } from '@usewaypoint/email-builder';
 import { toPng } from 'html-to-image';
@@ -12,14 +12,14 @@ export default function SaveButton() {
   const onClick = async () => {
     setLoading(true);
     try {
-      // Step 1: Create share URL
+      // Step 1: Create shareable URL for the editor
       const encodedJson = encodeURIComponent(JSON.stringify(emailDocument));
       const shareUrl = `https://emailbuilder.iynj.org/#code/${btoa(encodedJson)}`;
 
       // Step 2: Render email to static HTML
       const htmlString = renderToStaticMarkup(emailDocument, { rootBlockId: 'root' });
 
-      // Step 3: Create a hidden div
+      // Step 3: Create hidden div
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'fixed';
       tempDiv.style.top = '-10000px';
@@ -27,24 +27,28 @@ export default function SaveButton() {
       tempDiv.style.width = '600px'; // Standard email width
       tempDiv.innerHTML = htmlString;
 
-      // Fix CORS for images
+      // Step 4: Fix image CORS
       tempDiv.querySelectorAll('img').forEach((img) => {
         img.setAttribute('crossorigin', 'anonymous');
       });
 
       document.body.appendChild(tempDiv);
 
-      // Step 4: Convert to PNG safely
+      // Step 5: Convert to PNG safely
       const pngDataUrl = await toPng(tempDiv, {
         cacheBust: true,
         skipFonts: true,
+        imagePlaceholder:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=', // 1x1 transparent pixel fallback
       });
 
-      // Step 5: Cleanup
+      // Step 6: Clean up the temp div
       document.body.removeChild(tempDiv);
 
-      // Step 6: Open final submit page
-      const finalUrl = `https://inspireyouthnj.org/admin/myemails/submit?png=${encodeURIComponent(pngDataUrl)}&url=${encodeURIComponent(shareUrl)}`;
+      // Step 7: Open final submit page
+      const finalUrl = `https://inspireyouthnj.org/admin/myemails/submit?png=${encodeURIComponent(
+        pngDataUrl
+      )}&url=${encodeURIComponent(shareUrl)}`;
       window.open(finalUrl, '_blank');
     } catch (error) {
       console.error('SaveButton error:', error);
@@ -58,11 +62,7 @@ export default function SaveButton() {
     <Tooltip title="Save email">
       <span>
         <IconButton onClick={onClick} disabled={loading}>
-          {loading ? (
-            <CircularProgress size={20} />
-          ) : (
-            <CloudUploadOutlinedIcon fontSize="small" /> // ✅ New Icon
-          )}
+          {loading ? <CircularProgress size={20} /> : <CloudUploadOutlinedIcon fontSize="small" />}
         </IconButton>
       </span>
     </Tooltip>
