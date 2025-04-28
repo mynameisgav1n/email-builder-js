@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from '@usewaypoint/email-builder'; // ✅ Same a
 export default function SendButton() {
   const document = useDocument();
 
-  const minifyHTML = (html) => {
+  const minifyHTML = (html: string) => {
     return html
       .replace(/\n/g, '')
       .replace(/\s\s+/g, ' ')
@@ -16,7 +16,7 @@ export default function SendButton() {
       .replace(/<!--.*?-->/g, '');
   };
 
-  const minimalEscape = (str) => {
+  const minimalEscape = (str: string) => {
     return str
       .replace(/%/g, '%25')
       .replace(/#/g, '%23')
@@ -26,7 +26,7 @@ export default function SendButton() {
       .replace(/"/g, '%22');
   };
 
-  const copyToClipboard = async (text) => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       console.log('HTML copied to clipboard successfully!');
@@ -38,9 +38,20 @@ export default function SendButton() {
   const onClick = async () => {
     const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
     const minifiedHtml = minifyHTML(html);
-    const escapedHtml = minimalEscape(minifiedHtml); // ✅ Only escape necessary characters
 
     const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
+
+    // NEW: If the HTML contains { or }, copy and open without prefill
+    if (minifiedHtml.includes('{') || minifiedHtml.includes('}')) {
+      await copyToClipboard(minifiedHtml);
+      alert(
+        'The HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the Blast Email form that will open in a new tab.'
+      );
+      window.open(baseUrl, '_blank');
+      return;
+    }
+
+    const escapedHtml = minimalEscape(minifiedHtml); // ✅ Only escape necessary characters
     const prefillUrl = `${baseUrl}?prefill_html=${escapedHtml}`;
 
     const MAX_URL_LENGTH = 7000; // Safe
