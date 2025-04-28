@@ -8,7 +8,6 @@ import { renderToStaticMarkup } from '@usewaypoint/email-builder'; // ✅ Same a
 export default function SendButton() {
   const document = useDocument();
 
-  // Minify HTML to reduce size
   const minifyHTML = (html) => {
     return html
       .replace(/\n/g, '')
@@ -17,7 +16,6 @@ export default function SendButton() {
       .replace(/<!--.*?-->/g, '');
   };
 
-  // Copy to clipboard helper
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -27,32 +25,26 @@ export default function SendButton() {
     }
   };
 
-const onClick = async () => {
-  const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
-  const minifiedHtml = minifyHTML(html);
+  const onClick = async () => {
+    const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
+    const minifiedHtml = minifyHTML(html);
 
-  const rawLength = minifiedHtml.length;
-  const MAX_RAW_HTML_LENGTH = 1400; // Safe limit for unencoded minified HTML
+    const rawLength = minifiedHtml.length;
+    const MAX_RAW_HTML_LENGTH = 1400; // Safe limit for raw HTML size
 
-  const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
-  
-  if (rawLength > MAX_RAW_HTML_LENGTH) {
-    await copyToClipboard(minifiedHtml); // Copy raw HTML
-    alert(
-      'The HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the Blast Email form that will open in a new tab.'
-    );
-    window.open(baseUrl, '_blank');
-    return;
-  };
+    const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
 
-  // Otherwise safe to encode and open
-  const encodedHtml = encodeURIComponent(minifiedHtml);
-  const prefillUrl = `${baseUrl}?prefill_html=${encodedHtml}`;
-  window.open(prefillUrl, '_blank');
-};
+    if (rawLength > MAX_RAW_HTML_LENGTH) {
+      await copyToClipboard(minifiedHtml);
+      alert(
+        'Your message was too large.\n\nThe HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the site that will open in a new tab.'
+      );
+      window.open(baseUrl, '_blank');
+      return;
+    }
 
-
-    // Otherwise, safe to send with prefill
+    const encodedHtml = encodeURIComponent(minifiedHtml);
+    const prefillUrl = `${baseUrl}?prefill_html=${encodedHtml}`;
     window.open(prefillUrl, '_blank');
   };
 
