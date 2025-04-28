@@ -1,16 +1,25 @@
 import React from 'react';
 
-import { Box, Button, Divider, Drawer, Link, Stack, Typography } from '@mui/material';
-
-import { useSamplesDrawerOpen } from '../../documents/editor/EditorContext';
+import { Box, Button, Divider, Drawer, Stack, Typography } from '@mui/material';
+import { useSamplesDrawerOpen, useDocument } from '../../documents/editor/EditorContext';
+import { renderToStaticMarkup } from '@usewaypoint/email-builder';
 
 import SidebarButton from './SidebarButton';
 import logo from './waypoint.svg';
 
 export const SAMPLES_DRAWER_WIDTH = 240;
 
+// Function to send the email by opening the Inspire Youth URL
+async function sendEmail(document: any) {
+  const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
+  const encodedHtml = encodeURIComponent(html);
+  const url = `https://inspireyouthnj.org/admin/blastemail?code=${encodedHtml}`;
+  window.open(url, '_blank');
+}
+
 export default function SamplesDrawer() {
   const samplesDrawerOpen = useSamplesDrawerOpen();
+  const document = useDocument();
 
   return (
     <Drawer
@@ -25,19 +34,18 @@ export default function SamplesDrawer() {
         <Stack spacing={2} sx={{ '& .MuiButtonBase-root': { width: '100%', justifyContent: 'flex-start' } }}>
 
           <Box 
-  display="flex" 
-  justifyContent="center" 
-  alignItems="center"
-  sx={{ pt: 2 }}  // <<< added padding-top
->
-  <img 
-    src="https://static.iynj.org/fullLogo.png" 
-    alt="Inspire Youth NJ Logo" 
-    style={{ width: '80%', maxWidth: 150, marginBottom: 8 }} 
-  />
-</Box>
+            display="flex" 
+            justifyContent="center" 
+            alignItems="center"
+            sx={{ pt: 2 }} // Added padding-top
+          >
+            <img 
+              src="https://static.iynj.org/fullLogo.png" 
+              alt="Inspire Youth NJ Logo" 
+              style={{ width: '80%', maxWidth: 150, marginBottom: 8 }} 
+            />
+          </Box>
 
-          
           <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
             IYNJ Email Builder
           </Typography>
@@ -79,8 +87,7 @@ export default function SamplesDrawer() {
             variant="contained"
             color="primary"
             sx={{ justifyContent: 'center' }}
-            href="mailto:gavin@inspireyouthnj.org"
-            target="_blank"
+            onClick={() => sendEmail(document)} // <<<<< REAL Send behavior now
           >
             Send email
           </Button>
