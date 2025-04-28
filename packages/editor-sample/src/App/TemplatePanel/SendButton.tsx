@@ -16,12 +16,36 @@ export default function SendButton() {
       .replace(/<!--.*?-->/g, '');
   };
 
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      console.log('HTML copied to clipboard successfully!');
+    } catch (error) {
+      console.error('Failed to copy HTML to clipboard:', error);
+    }
+  };
+
   const onClick = async () => {
     const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
     const minifiedHtml = minifyHTML(html);
-    const encodedHtml = encodeURIComponent(minifiedHtml); // ❌ No btoa, only URL encode
 
-    window.open(`https://inspireyouthnj.org/admin/blastemail?prefill_html=${encodedHtml}`, '_blank');
+    const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
+    const prefillUrl = `${baseUrl}?prefill_html=${minifiedHtml}`;
+
+    // Set safe limit for raw (unencoded) URL
+    const MAX_URL_LENGTH = 1900;
+
+    const fullUrlLength = prefillUrl.length;
+
+    if (fullUrlLength > MAX_URL_LENGTH) {
+      await copyToClipboard(minifiedHtml);
+      alert('Your message was too large. The HTML code has been copied to your clipboard. Please paste it into the "Email Content" field on the site that will open in a new tab.');
+      window.open(baseUrl, '_blank'); // Open page with no prefill
+      return;
+    }
+
+    // Otherwise, proceed like normal
+    window.open(prefillUrl, '_blank');
   };
 
   return (
