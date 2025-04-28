@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from '@usewaypoint/email-builder'; // ✅ Same a
 export default function SendButton() {
   const document = useDocument();
 
+  // Minify HTML to reduce size
   const minifyHTML = (html) => {
     return html
       .replace(/\n/g, '')
@@ -16,6 +17,7 @@ export default function SendButton() {
       .replace(/<!--.*?-->/g, '');
   };
 
+  // Copy to clipboard helper
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -28,23 +30,23 @@ export default function SendButton() {
   const onClick = async () => {
     const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
     const minifiedHtml = minifyHTML(html);
+    const encodedHtml = encodeURIComponent(minifiedHtml);
 
     const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
-    const prefillUrl = `${baseUrl}?prefill_html=${minifiedHtml}`;
+    const prefillUrl = `${baseUrl}?prefill_html=${encodedHtml}`;
 
-    // Set safe limit for raw (unencoded) URL
-    const MAX_URL_LENGTH = 1900;
+    const MAX_URL_LENGTH = 1900; // Safe limit
 
-    const fullUrlLength = prefillUrl.length;
-
-    if (fullUrlLength > MAX_URL_LENGTH) {
-      await copyToClipboard(minifiedHtml);
-      alert('The email HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the Blast Email form that will open in a new tab.');
-      window.open(baseUrl, '_blank'); // Open page with no prefill
+    if (prefillUrl.length > MAX_URL_LENGTH) {
+      await copyToClipboard(minifiedHtml); // Copy raw (unencoded) HTML for easy pasting
+      alert(
+        'Your message was too large.\n\nThe HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the site that will open in a new tab.'
+      );
+      window.open(baseUrl, '_blank'); // Open the page without prefill
       return;
     }
 
-    // Otherwise, proceed like normal
+    // Otherwise, safe to send with prefill
     window.open(prefillUrl, '_blank');
   };
 
