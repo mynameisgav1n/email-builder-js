@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SaveOutlined } from '@mui/icons-material';
+import { CloudUploadOutlined } from '@mui/icons-material';
 import { IconButton, Snackbar, Tooltip } from '@mui/material';
 
 import { useDocument } from '../../documents/editor/EditorContext';
@@ -28,7 +28,7 @@ export default function SaveButton() {
     <>
       <Tooltip title="Save to My Emails">
         <IconButton onClick={onClick}>
-          <SaveOutlined fontSize="small" />
+          <CloudUploadOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
       <Snackbar
