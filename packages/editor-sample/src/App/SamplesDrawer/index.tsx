@@ -90,7 +90,7 @@ export default function SamplesDrawer() {
             sx={{ justifyContent: 'center' }}
             onClick={() => sendEmail(document)} // ✅ Correct Send behavior
           >
-            Send email
+            Send this blast email
           </Button>
         </Stack>
       </Stack>
