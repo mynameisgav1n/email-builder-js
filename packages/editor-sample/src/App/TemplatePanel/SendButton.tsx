@@ -10,17 +10,18 @@ export default function SendButton() {
 
   const minifyHTML = (html) => {
     return html
-      .replace(/\n/g, '')                  // Remove line breaks
-      .replace(/\s\s+/g, ' ')               // Collapse multiple spaces
-      .replace(/>\s+</g, '><')              // Remove spaces between tags
-      .replace(/<!--.*?-->/g, '');           // Remove HTML comments
+      .replace(/\n/g, '')
+      .replace(/\s\s+/g, ' ')
+      .replace(/>\s+</g, '><')
+      .replace(/<!--.*?-->/g, '');
   };
 
   const onClick = async () => {
-    const html = renderToStaticMarkup(document, { rootBlockId: 'root' }); // ✅ Render full real HTML
-    const minifiedHtml = minifyHTML(html); // 🧹 Minify it
-    const encodedHtml = btoa(encodeURIComponent(minifiedHtml)); // ✅ Encode safely for URL
-    window.open(`https://inspireyouthnj.org/admin/blastemail?prefill_html=${encodedHtml}`, '_blank'); // ✅ Open in new tab
+    const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
+    const minifiedHtml = minifyHTML(html);
+    const encodedHtml = encodeURIComponent(minifiedHtml); // ❌ No btoa, only URL encode
+
+    window.open(`https://inspireyouthnj.org/admin/blastemail?prefill_html=${encodedHtml}`, '_blank');
   };
 
   return (
