@@ -16,6 +16,16 @@ export default function SendButton() {
       .replace(/<!--.*?-->/g, '');
   };
 
+  const minimalEscape = (str) => {
+    return str
+      .replace(/%/g, '%25')
+      .replace(/#/g, '%23')
+      .replace(/&/g, '%26')
+      .replace(/</g, '%3C')
+      .replace(/>/g, '%3E')
+      .replace(/"/g, '%22');
+  };
+
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -28,11 +38,12 @@ export default function SendButton() {
   const onClick = async () => {
     const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
     const minifiedHtml = minifyHTML(html);
+    const escapedHtml = minimalEscape(minifiedHtml); // ✅ Only escape necessary characters
 
     const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
-    const prefillUrl = `${baseUrl}?prefill_html=${minifiedHtml}`;
+    const prefillUrl = `${baseUrl}?prefill_html=${escapedHtml}`;
 
-    const MAX_URL_LENGTH = 7000; // reasonable safe size for raw HTML in URL (you can tweak it!)
+    const MAX_URL_LENGTH = 7000; // Safe
 
     if (prefillUrl.length > MAX_URL_LENGTH) {
       await copyToClipboard(minifiedHtml);
