@@ -1,70 +1,44 @@
 import React, { useState } from 'react';
-import { IconButton, Tooltip, CircularProgress } from '@mui/material';
-import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import { SaveAltOutlined } from '@mui/icons-material';
+import { IconButton, Snackbar, Tooltip } from '@mui/material';
+
 import { useDocument } from '../../documents/editor/EditorContext';
-import { renderToStaticMarkup } from '@usewaypoint/email-builder';
-import { toPng } from 'html-to-image';
 
 export default function SaveButton() {
-  const emailDocument = useDocument();
-  const [loading, setLoading] = useState(false);
+  const document = useDocument();
+  const [message, setMessage] = useState<string | null>(null);
 
   const onClick = async () => {
-    setLoading(true);
     try {
-      // Step 1: Create shareable URL for the editor
-      const encodedJson = encodeURIComponent(JSON.stringify(emailDocument));
-      const shareUrl = `https://emailbuilder.iynj.org/#code/${btoa(encodedJson)}`;
+      // Encode document as URL (same as Share button)
+      const c = encodeURIComponent(JSON.stringify(document));
+      const generatedUrl = `${window.location.origin}${window.location.pathname}#code/${btoa(c)}`;
 
-      // Step 2: Render email to static HTML
-      const htmlString = renderToStaticMarkup(emailDocument, { rootBlockId: 'root' });
-
-      // Step 3: Create hidden div
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.top = '-10000px';
-      tempDiv.style.left = '-10000px';
-      tempDiv.style.width = '600px'; // Standard email width
-      tempDiv.innerHTML = htmlString;
-
-      // Step 4: Fix image CORS
-      tempDiv.querySelectorAll('img').forEach((img) => {
-        img.setAttribute('crossorigin', 'anonymous');
-      });
-
-      document.body.appendChild(tempDiv);
-
-      // Step 5: Convert to PNG safely
-      const pngDataUrl = await toPng(tempDiv, {
-        cacheBust: true,
-        skipFonts: true,
-        imagePlaceholder:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=', // 1x1 transparent pixel fallback
-      });
-
-      // Step 6: Clean up the temp div
-      document.body.removeChild(tempDiv);
-
-      // Step 7: Open final submit page
-      const finalUrl = `https://inspireyouthnj.org/admin/myemails/submit?png=${encodeURIComponent(
-        pngDataUrl
-      )}&url=${encodeURIComponent(shareUrl)}`;
-      window.open(finalUrl, '_blank');
+      // Now open the new tab with only the URL (no PNG)
+      window.open(`https://inspireyouthnj.org/admin/myemails/submit?url=${encodeURIComponent(generatedUrl)}`, '_blank');
     } catch (error) {
-      console.error('SaveButton error:', error);
-      alert('An error occurred while saving. Please try again.');
-    } finally {
-      setLoading(false);
+      console.error('Failed to save:', error);
+      setMessage('Failed to generate URL.');
     }
   };
 
+  const onClose = () => {
+    setMessage(null);
+  };
+
   return (
-    <Tooltip title="Save email">
-      <span>
-        <IconButton onClick={onClick} disabled={loading}>
-          {loading ? <CircularProgress size={20} /> : <CloudUploadOutlinedIcon fontSize="small" />}
+    <>
+      <Tooltip title="Save to My Emails">
+        <IconButton onClick={onClick}>
+          <SaveAltOutlined fontSize="small" />
         </IconButton>
-      </span>
-    </Tooltip>
+      </Tooltip>
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        open={message !== null}
+        onClose={onClose}
+        message={message}
+      />
+    </>
   );
 }
