@@ -86,7 +86,7 @@ export default function SamplesDrawer() {
             sx={{ justifyContent: 'center' }}
             onClick={handleSendEmailClick} // ✅ triggers mailto
           >
-            Send email
+            Send email for help
           </Button>
         </Stack>
       </Stack>
