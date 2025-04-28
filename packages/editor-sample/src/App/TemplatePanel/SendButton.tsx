@@ -29,12 +29,12 @@ export default function SendButton() {
     const html = renderToStaticMarkup(document, { rootBlockId: 'root' });
     const minifiedHtml = minifyHTML(html);
 
-    const rawLength = minifiedHtml.length;
-    const MAX_RAW_HTML_LENGTH = 1400; // Safe limit for raw HTML size
-
     const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
+    const prefillUrl = `${baseUrl}?prefill_html=${minifiedHtml}`;
 
-    if (rawLength > MAX_RAW_HTML_LENGTH) {
+    const MAX_URL_LENGTH = 7000; // reasonable safe size for raw HTML in URL (you can tweak it!)
+
+    if (prefillUrl.length > MAX_URL_LENGTH) {
       await copyToClipboard(minifiedHtml);
       alert(
         'Your message was too large.\n\nThe HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the site that will open in a new tab.'
@@ -43,8 +43,6 @@ export default function SendButton() {
       return;
     }
 
-    const encodedHtml = encodeURIComponent(minifiedHtml);
-    const prefillUrl = `${baseUrl}?prefill_html=${encodedHtml}`;
     window.open(prefillUrl, '_blank');
   };
 
