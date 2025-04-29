@@ -61,7 +61,7 @@ export default function SaveButton() {
       const res = await fetch('/api/save-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, full_url: fullUrl }),
+        body: JSON.stringify({ title, short_link: fullUrl }),
       });
 
       if (!res.ok) throw new Error('Save failed');
@@ -79,7 +79,7 @@ export default function SaveButton() {
       const res = await fetch('/api/update-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
+        body: JSON.stringify({ id: selectedId, short_link: fullUrl }),
       });
   
       if (!res.ok) throw new Error('Update failed');
