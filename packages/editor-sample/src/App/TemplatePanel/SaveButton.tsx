@@ -1,105 +1,128 @@
-import React, { useState } from 'react';
+// SaveButton.tsx
+import React, { useEffect, useState } from 'react';
 import {
   IconButton,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
-  TextField,
   DialogActions,
   Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Snackbar,
-  Tooltip,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
-  const [open, setOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [mode, setMode] = useState<'new' | 'update' | null>(null);
+  const [emails, setEmails] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
   const [title, setTitle] = useState('');
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const handleClickOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
-    setTitle('');
-    setSaving(false);
-  };
+  const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
+  const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
+
+  useEffect(() => {
+    if (dialogOpen && mode === 'update') {
+      fetch('/api/list-emails.php')
+        .then(res => res.json())
+        .then(data => setEmails(data))
+        .catch(err => console.error('Failed to fetch emails:', err));
+    }
+  }, [dialogOpen, mode]);
 
   const handleSave = async () => {
-    if (!title) return;
-    setSaving(true);
-
     try {
-      // Step 1: Encode the full URL
-      const encoded = encodeURIComponent(JSON.stringify(document));
-      const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${btoa(encoded)}`;
+      const endpoint = mode === 'new' ? '/api/save-email.php' : '/api/update-email.php';
+      const payload = mode === 'new'
+        ? { title, full_url: fullUrl }
+        : { id: selectedId, full_url: fullUrl };
 
-      // Step 2: Get a shortened code
-      const shortenRes = await fetch('/api/shorten.php', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_url: fullUrl }),
+        body: JSON.stringify(payload),
       });
 
-      if (!shortenRes.ok) throw new Error('Failed to shorten URL');
-      const { short } = await shortenRes.json();
-
-      // Step 3: Save it to saved_emails with title
-      const saveRes = await fetch('/api/save-email.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, short_link: short }),
-      });
-
-      if (!saveRes.ok) throw new Error('Failed to save to My Emails');
-
-      setMessage('Saved to My Emails!');
-      handleClose();
+      if (!res.ok) throw new Error('Save failed');
+      setMessage(mode === 'new' ? 'Email saved.' : 'Email updated.');
+      setDialogOpen(false);
+      setMode(null);
+      setTitle('');
+      setSelectedId('');
     } catch (err) {
       console.error(err);
-      setMessage('Failed to save email.');
-      setSaving(false);
+      setMessage('An error occurred while saving.');
     }
   };
 
   return (
     <>
-      <Tooltip title="Save to My Emails">
-        <IconButton onClick={handleClickOpen} color="primary">
-          <CloudUploadOutlined />
+      <Tooltip title="Save email">
+        <IconButton onClick={() => setDialogOpen(true)}>
+          <CloudUploadOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
 
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
         <DialogTitle>Save Email</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Title"
-            fullWidth
-            variant="outlined"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={saving}
-          />
+          {!mode && (
+            <Stack spacing={2} mt={1}>
+              <Button variant="contained" onClick={() => setMode('new')}>Save as New</Button>
+              <Button variant="outlined" onClick={() => setMode('update')}>Update Existing</Button>
+            </Stack>
+          )}
+
+          {mode === 'new' && (
+            <TextField
+              autoFocus
+              fullWidth
+              label="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              sx={{ mt: 2 }}
+            />
+          )}
+
+          {mode === 'update' && (
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Select Email</InputLabel>
+              <Select
+                value={selectedId}
+                label="Select Email"
+                onChange={(e) => setSelectedId(e.target.value)}
+              >
+                {emails.map((email: any) => (
+                  <MenuItem key={email.id} value={email.id}>{email.title}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!title || saving}>
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
+
+        {mode && (
+          <DialogActions>
+            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={(mode === 'new' && !title.trim()) || (mode === 'update' && !selectedId)}>Save</Button>
+          </DialogActions>
+        )}
       </Dialog>
 
       <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         open={!!message}
         autoHideDuration={4000}
         onClose={() => setMessage(null)}
         message={message}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       />
     </>
   );
