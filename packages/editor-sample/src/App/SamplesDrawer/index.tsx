@@ -62,7 +62,7 @@ export default function SamplesDrawer() {
           </Box>
 
           <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
-            {username ? `Hi, ${username}` : '...'}
+            {username ? `Welcome, ${username}!` : '...'}
           </Typography>
 
           <Stack alignItems="flex-start">
