@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { IconButton, Tooltip } from '@mui/material';
-import LinkIcon from '@mui/icons-material/Link'; // or any icon you want
+import { IconButton, Snackbar, Tooltip } from '@mui/material';
+import LinkIcon from '@mui/icons-material/Link';
 
 import { useDocument } from '../../documents/editor/EditorContext';
 
@@ -10,17 +10,15 @@ export default function ShortenButton() {
 
   const onClick = async () => {
     try {
-      // 1. Grab the CURRENT document
+      // Create the real URL for the current document
       const encoded = encodeURIComponent(JSON.stringify(document));
       const base64 = btoa(encoded);
       const longUrl = `https://emailbuilder.iynj.org/#code/${base64}`;
 
-      // 2. POST it to the shortener
+      // Post to /api/shorten.php
       const response = await fetch('/api/shorten.php', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: longUrl }),
       });
 
@@ -50,6 +48,13 @@ export default function ShortenButton() {
           <LinkIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        open={message !== null}
+        onClose={onClose}
+        autoHideDuration={4000}
+        message={message}
+      />
     </>
   );
 }
