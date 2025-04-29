@@ -16,29 +16,46 @@ export default function SaveButton() {
   const document = useDocument();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleClickOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    setTitle('');
+    setSaving(false);
+  };
 
   const handleSave = async () => {
-    const encoded = encodeURIComponent(JSON.stringify(document));
+    if (!title) return;
 
-    const shortenRes = await fetch('/shorten.php', {
-      method: 'POST',
-      body: JSON.stringify({ encoded }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+    setSaving(true);
+    try {
+      const encoded = encodeURIComponent(JSON.stringify(document));
 
-    const { short } = await shortenRes.json();
+      const shortenRes = await fetch('/shorten.php', {
+        method: 'POST',
+        body: JSON.stringify({ encoded }),
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    await fetch('/api/save-email.php', {
-      method: 'POST',
-      body: JSON.stringify({ title, short_link: short }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+      if (!shortenRes.ok) throw new Error('Shorten failed');
+      const { short } = await shortenRes.json();
 
-    alert('Email saved!');
-    handleClose();
+      const saveRes = await fetch('/api/save-email.php', {
+        method: 'POST',
+        body: JSON.stringify({ title, short_link: short }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!saveRes.ok) throw new Error('Save failed');
+
+      alert('Email saved!');
+      handleClose();
+    } catch (err) {
+      console.error('Save error:', err);
+      alert('Failed to save email. Please try again.');
+      setSaving(false);
+    }
   };
 
   return (
@@ -60,11 +77,16 @@ export default function SaveButton() {
             variant="outlined"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            disabled={saving}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!title}>Save</Button>
+          <Button onClick={handleClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!title || saving}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
         </DialogActions>
       </Dialog>
     </>
