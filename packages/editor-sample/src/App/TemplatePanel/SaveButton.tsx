@@ -27,33 +27,24 @@ export default function SaveButton() {
 
   const handleSave = async () => {
     if (!title) return;
-
     setSaving(true);
+
     try {
-      const encoded = encodeURIComponent(JSON.stringify(document));
-
-      const shortenRes = await fetch('/api/shorten.php', {
+      // Call save-email.php with title only
+      const res = await fetch('/api/save-email.php', {
         method: 'POST',
-        body: JSON.stringify({ encoded }),
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
       });
 
-      if (!shortenRes.ok) throw new Error('Shorten failed');
-      const { short } = await shortenRes.json();
+      if (!res.ok) throw new Error('Save failed');
+      const data = await res.json();
 
-      const saveRes = await fetch('/api/save-email.php', {
-        method: 'POST',
-        body: JSON.stringify({ title, short_link: short }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!saveRes.ok) throw new Error('Save failed');
-
-      alert('Email saved!');
+      alert(`Email saved! Your link: https://emailbuilder.iynj.org/${data.short}`);
       handleClose();
     } catch (err) {
-      console.error('Save error:', err);
-      alert('Failed to save email. Please try again.');
+      console.error(err);
+      alert('Failed to save email. Try again.');
       setSaving(false);
     }
   };
@@ -81,9 +72,7 @@ export default function SaveButton() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={saving}>
-            Cancel
-          </Button>
+          <Button onClick={handleClose} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} disabled={!title || saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
