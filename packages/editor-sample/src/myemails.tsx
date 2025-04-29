@@ -9,8 +9,9 @@ import {
   Stack,
   CircularProgress,
   CssBaseline,
-  useTheme,
   ThemeProvider,
+  useTheme,
+  Button,
 } from '@mui/material';
 
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
@@ -50,6 +51,27 @@ function MyEmailsPage() {
       });
   }, []);
 
+  const handleDelete = async (shortLink: string) => {
+    const confirmDelete = confirm('Are you sure you want to delete this saved email?');
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch('/api/delete-email.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ short_link: shortLink }),
+      });
+
+      if (!res.ok) throw new Error('Delete failed');
+
+      // Update state after deletion
+      setEmails((prev) => prev.filter((e) => e.short_link !== shortLink));
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Failed to delete email. Please try again.');
+    }
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h5" fontWeight={600} mb={2}>
@@ -69,14 +91,23 @@ function MyEmailsPage() {
                 <Typography variant="body2" color="text.secondary" mb={1}>
                   Saved on {new Date(email.created_at).toLocaleString()}
                 </Typography>
-                <Link
-                  href={`/${email.short_link}`}
-                  target="_blank"
-                  rel="noopener"
-                  underline="hover"
-                >
-                  View Email
-                </Link>
+                <Stack direction="row" spacing={2}>
+                  <Link
+                    href={`/${email.short_link}`}
+                    target="_blank"
+                    rel="noopener"
+                    underline="hover"
+                  >
+                    View Email
+                  </Link>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(email.short_link)}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
               </CardContent>
             </Card>
           ))}
