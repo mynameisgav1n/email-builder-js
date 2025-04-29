@@ -15,6 +15,7 @@ import {
 
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
+import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
 import theme from './theme';
 
 interface SavedEmail {
@@ -24,7 +25,7 @@ interface SavedEmail {
   created_at: string;
 }
 
-function useDrawerTransition(cssProp: 'margin-left' | 'margin-right', open: boolean) {
+function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
   const { transitions } = useTheme();
   return transitions.create(cssProp, {
     easing: !open ? transitions.easing.sharp : transitions.easing.easeOut,
@@ -91,12 +92,11 @@ function LayoutWrapper() {
 
   return (
     <>
-      <InspectorDrawer />
       <SamplesDrawer />
       <Stack
         sx={{
           marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          transition: [mlTransition, mrTransition].join(', '),
+          transition: mlTransition,
         }}
       >
         <MyEmailsPage />
