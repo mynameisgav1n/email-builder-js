@@ -81,7 +81,7 @@ export default function SamplesDrawer() {
           <Divider />
 
           <Stack>
-            <Button size="small" href="/email-builder-js/myemails.html" target="_blank">
+            <Button size="small" href="/email-builder-js/myemails.html">
               My Emails
             </Button>
           </Stack>
