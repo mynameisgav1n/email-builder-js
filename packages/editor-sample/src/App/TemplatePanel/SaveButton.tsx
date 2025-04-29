@@ -81,9 +81,11 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
       });
-
+  
       if (!res.ok) throw new Error('Update failed');
-      setMessage('Email updated successfully.');
+      const data = await res.json();
+      const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
+      setMessage(`Email updated: ${shortUrl}`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
@@ -92,6 +94,7 @@ export default function SaveButton() {
       setSelectedId('');
     }
   };
+
 
   return (
     <>
