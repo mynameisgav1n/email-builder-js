@@ -32,7 +32,7 @@ export default function SaveButton() {
     try {
       const encoded = encodeURIComponent(JSON.stringify(document));
 
-      const shortenRes = await fetch('/shorten.php', {
+      const shortenRes = await fetch('/api/shorten.php', {
         method: 'POST',
         body: JSON.stringify({ encoded }),
         headers: { 'Content-Type': 'application/json' },
