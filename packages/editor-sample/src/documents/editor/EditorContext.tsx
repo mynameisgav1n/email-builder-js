@@ -1,7 +1,7 @@
+// EditorContext.tsx
+
 import { create } from 'zustand';
-
 import getConfiguration from '../../getConfiguration';
-
 import { TEditorConfiguration } from './core';
 
 type TValue = {
@@ -14,6 +14,8 @@ type TValue = {
 
   inspectorDrawerOpen: boolean;
   samplesDrawerOpen: boolean;
+
+  loadedEmail: string | null;
 };
 
 const editorStateStore = create<TValue>(() => ({
@@ -22,9 +24,9 @@ const editorStateStore = create<TValue>(() => ({
   selectedSidebarTab: 'styles',
   selectedMainTab: 'editor',
   selectedScreenSize: 'desktop',
-
   inspectorDrawerOpen: true,
   samplesDrawerOpen: true,
+  loadedEmail: null,
 }));
 
 export function useDocument() {
@@ -106,4 +108,12 @@ export function toggleSamplesDrawerOpen() {
 
 export function setSelectedScreenSize(selectedScreenSize: TValue['selectedScreenSize']) {
   return editorStateStore.setState({ selectedScreenSize });
+}
+
+export function useLoadedEmail() {
+  return editorStateStore((s) => s.loadedEmail);
+}
+
+export function setLoadedEmail(loadedEmail: string | null) {
+  return editorStateStore.setState({ loadedEmail });
 }
