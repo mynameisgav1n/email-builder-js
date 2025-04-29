@@ -182,16 +182,20 @@ function MyEmailsPage() {
       )}
 
       {/* Rename Dialog */}
-      <Dialog open={!!renameDialog} onClose={() => setRenameDialog(null)}>
+      <Dialog open={!!renameDialog} onClose={() => setRenameDialog(null)} fullWidth maxWidth="xs">
         <DialogTitle>Rename Email</DialogTitle>
-        <DialogContent sx={{ minWidth: 300 }}>
-          <TextField
-            autoFocus
-            fullWidth
-            label="New Title"
-            value={renameTitle}
-            onChange={(e) => setRenameTitle(e.target.value)}
-          />
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              fullWidth
+              label="New Title"
+              value={renameTitle}
+              onChange={(e) => setRenameTitle(e.target.value)}
+              variant="outlined"
+              size="small"
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRenameDialog(null)}>Cancel</Button>
@@ -200,6 +204,7 @@ function MyEmailsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
 
       {/* Confirm Delete Dialog */}
       <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
