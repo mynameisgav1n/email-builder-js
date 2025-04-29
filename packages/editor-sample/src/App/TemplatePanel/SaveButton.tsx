@@ -1,23 +1,35 @@
-import React from 'react';
-import { Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions,
+  Button,
+  Tooltip,
+} from '@mui/material';
+import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
-  const [open, setOpen] = React.useState(false);
-  const [title, setTitle] = React.useState('');
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
 
   const handleClickOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const handleSave = async () => {
     const encoded = encodeURIComponent(JSON.stringify(document));
-    const shortRes = await fetch('/shorten.php', {
+
+    const shortenRes = await fetch('/shorten.php', {
       method: 'POST',
       body: JSON.stringify({ encoded }),
       headers: { 'Content-Type': 'application/json' },
     });
-    const { short } = await shortRes.json();
+
+    const { short } = await shortenRes.json();
 
     await fetch('/api/save-email.php', {
       method: 'POST',
@@ -25,18 +37,24 @@ export default function SaveButton() {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    handleClose();
     alert('Email saved!');
+    handleClose();
   };
 
   return (
     <>
-      <Button variant="outlined" onClick={handleClickOpen}>Save</Button>
+      <Tooltip title="Save Email">
+        <IconButton onClick={handleClickOpen} color="primary">
+          <CloudUploadOutlined />
+        </IconButton>
+      </Tooltip>
+
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Save Email</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
+            margin="dense"
             label="Title"
             fullWidth
             variant="outlined"
