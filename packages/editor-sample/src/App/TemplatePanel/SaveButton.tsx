@@ -15,7 +15,6 @@ import {
   Select,
   Snackbar,
   Stack,
-  Paper,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
@@ -31,7 +30,7 @@ export default function SaveButton() {
   const [message, setMessage] = useState<string | null>(null);
 
   const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
-  const fullUrl = `https://emailbuilder.iynj.org/email/${encoded}`;
+  const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -61,11 +60,13 @@ export default function SaveButton() {
       const res = await fetch('/api/save-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, short_link: fullUrl }),
+        body: JSON.stringify({ title, full_url: fullUrl }),
       });
 
       if (!res.ok) throw new Error('Save failed');
-      setMessage('Email saved successfully.');
+      const data = await res.json();
+      const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
+      setMessage(`Saved! Link: ${shortUrl}`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -79,13 +80,13 @@ export default function SaveButton() {
       const res = await fetch('/api/update-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedId, short_link: fullUrl }),
+        body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
       });
-  
+
       if (!res.ok) throw new Error('Update failed');
       const data = await res.json();
       const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
-      setMessage(`Email updated: ${shortUrl}`);
+      setMessage(`Updated! Link: ${shortUrl}`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
@@ -95,7 +96,6 @@ export default function SaveButton() {
     }
   };
 
-
   return (
     <>
       <Tooltip title="Save email">
@@ -104,24 +104,20 @@ export default function SaveButton() {
         </IconButton>
       </Tooltip>
 
-      {/* New/Update Popup Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         PaperProps={{
           elevation: 4,
-          sx: {
-            mt: 1,
-            boxShadow: '0px 4px 10px rgba(0,0,0,0.2)',
-          },
+          sx: { mt: 1, boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' },
         }}
       >
         <MenuItem onClick={handleSaveNew}>Save as New</MenuItem>
         <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
       </Menu>
 
-      {/* New Email Title Dialog */}
+      {/* Dialog for New Email Title */}
       <Dialog open={titleDialogOpen} onClose={() => setTitleDialogOpen(false)}>
         <DialogTitle>Save as New Email</DialogTitle>
         <DialogContent>
@@ -135,18 +131,18 @@ export default function SaveButton() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTitleDialogOpen(false)}>Cancel</Button>
+          <Button variant="outlined" onClick={() => setTitleDialogOpen(false)}>Cancel</Button>
           <Button
+            variant="contained"
             onClick={handleSaveNewSubmit}
             disabled={!title.trim()}
-            variant="contained"
           >
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Update Existing Email Dialog */}
+      {/* Dialog for Updating Existing Email */}
       <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
         <DialogTitle>Update Saved Email</DialogTitle>
         <DialogContent>
@@ -160,7 +156,7 @@ export default function SaveButton() {
                 PaperProps: {
                   elevation: 4,
                   sx: {
-                    boxShadow: '0px 4px 10px rgba(0,0,0,0.2)',
+                    boxShadow: '0px 4px 12px rgba(0,0,0,0.15)',
                   },
                 },
               }}
@@ -174,21 +170,17 @@ export default function SaveButton() {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUpdateDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleUpdateSubmit}
-            disabled={!selectedId}
-            variant="contained"
-          >
+          <Button variant="outlined" onClick={() => setUpdateDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleUpdateSubmit} disabled={!selectedId}>
             Update
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Notification Snackbar */}
+      {/* Confirmation Snackbar */}
       <Snackbar
         open={!!message}
-        autoHideDuration={4000}
+        autoHideDuration={5000}
         onClose={() => setMessage(null)}
         message={message}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
