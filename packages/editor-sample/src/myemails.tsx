@@ -141,39 +141,58 @@ function MyEmailsPage() {
       ) : emails.length === 0 ? (
         <Typography>No saved emails found.</Typography>
       ) : (
-        <Stack direction="row" spacing={2} alignItems="center">
-  <Link
-    href={`/${email.short_link}`}
-    target="_blank"
-    rel="noopener"
-    underline="hover"
-  >
-    View Email
-  </Link>
-  <Button size="small" onClick={() => {
-    setRenameDialog(email);
-    setRenameTitle(email.title);
-  }}>
-    Rename
-  </Button>
-  <Button size="small" color="error" onClick={() => setConfirmDelete(email.short_link)}>
-    Delete
-  </Button>
-</Stack>
+        <Stack spacing={2}>
+          {emails.map((email) => (
+            <Card key={email.id} variant="outlined">
+              <CardContent>
+                <Typography variant="h6">{email.title}</Typography>
+                <Typography variant="body2" color="text.secondary" mb={1}>
+                  Saved on {new Date(email.created_at).toLocaleString()}
+                </Typography>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Link
+                    href={`/${email.short_link}`}
+                    target="_blank"
+                    rel="noopener"
+                    underline="hover"
+                  >
+                    View Email
+                  </Link>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setRenameDialog(email);
+                      setRenameTitle(email.title);
+                    }}
+                  >
+                    Rename
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => setConfirmDelete(email.short_link)}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
       )}
 
       {/* Rename Dialog */}
       <Dialog open={!!renameDialog} onClose={() => setRenameDialog(null)}>
         <DialogTitle>Rename Email</DialogTitle>
         <DialogContent sx={{ minWidth: 300 }}>
-  <TextField
-    autoFocus
-    fullWidth
-    label="New Title"
-    value={renameTitle}
-    onChange={(e) => setRenameTitle(e.target.value)}
-  />
-</DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="New Title"
+            value={renameTitle}
+            onChange={(e) => setRenameTitle(e.target.value)}
+          />
+        </DialogContent>
         <DialogActions>
           <Button onClick={() => setRenameDialog(null)}>Cancel</Button>
           <Button onClick={handleRename} disabled={!renameTitle.trim()}>
