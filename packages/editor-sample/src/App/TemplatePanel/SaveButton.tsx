@@ -55,8 +55,7 @@ export default function SaveButton() {
 
       if (!saveRes.ok) throw new Error('Failed to save to My Emails');
 
-      await navigator.clipboard.writeText(`https://emailbuilder.iynj.org/${short}`);
-      setMessage('Saved! Short link copied to clipboard.');
+      setMessage('Saved to My Emails!');
       handleClose();
     } catch (err) {
       console.error(err);
