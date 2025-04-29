@@ -15,6 +15,8 @@ import {
   Select,
   Snackbar,
   Stack,
+  useTheme,
+  Paper,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
@@ -26,11 +28,13 @@ export default function SaveButton() {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [emails, setEmails] = useState([]);
   const [selectedId, setSelectedId] = useState('');
+  const [selectedCode, setSelectedCode] = useState('');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const theme = useTheme();
 
   const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
-  const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
+  const longUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -60,7 +64,7 @@ export default function SaveButton() {
       const res = await fetch('/api/save-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, full_url: fullUrl }),
+        body: JSON.stringify({ title, short_link: longUrl }),
       });
 
       if (!res.ok) throw new Error('Save failed');
@@ -80,12 +84,12 @@ export default function SaveButton() {
       const res = await fetch('/api/update-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
+        body: JSON.stringify({ id: selectedId, short_link: selectedCode, full_url: longUrl }),
       });
 
       if (!res.ok) throw new Error('Update failed');
       const data = await res.json();
-      const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
+      const shortUrl = `https://emailbuilder.iynj.org/email/${selectedCode}`;
       setMessage(`Updated! Link: ${shortUrl}`);
     } catch (err) {
       console.error(err);
@@ -93,6 +97,7 @@ export default function SaveButton() {
     } finally {
       setUpdateDialogOpen(false);
       setSelectedId('');
+      setSelectedCode('');
     }
   };
 
@@ -109,29 +114,39 @@ export default function SaveButton() {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         PaperProps={{
-          elevation: 4,
-          sx: { mt: 1, boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' },
+          elevation: 6,
+          sx: {
+            mt: 1.5,
+            borderRadius: 2,
+            minWidth: 200,
+            boxShadow: '0px 8px 24px rgba(0,0,0,0.2)',
+            '& .MuiMenuItem-root': {
+              padding: '10px 16px',
+            },
+          },
         }}
       >
-        <MenuItem onClick={handleSaveNew}>Save as New</MenuItem>
-        <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
+        <MenuItem onClick={handleSaveNew}>💾 Save as New</MenuItem>
+        <MenuItem onClick={handleSaveUpdate}>✏️ Update Existing</MenuItem>
       </Menu>
 
-      {/* Dialog for New Email Title */}
+      {/* New Email Dialog */}
       <Dialog open={titleDialogOpen} onClose={() => setTitleDialogOpen(false)}>
-        <DialogTitle>Save as New Email</DialogTitle>
+        <DialogTitle>Save as New</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             fullWidth
-            label="Title"
+            label="Email Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             sx={{ mt: 1 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={() => setTitleDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="outlined" onClick={() => setTitleDialogOpen(false)}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleSaveNewSubmit}
@@ -142,21 +157,27 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog for Updating Existing Email */}
+      {/* Update Email Dialog */}
       <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
-        <DialogTitle>Update Saved Email</DialogTitle>
+        <DialogTitle>Update Existing</DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Select Email</InputLabel>
+            <InputLabel>Email</InputLabel>
             <Select
               value={selectedId}
-              label="Select Email"
-              onChange={(e) => setSelectedId(e.target.value)}
+              label="Email"
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedId(id);
+                const email = emails.find((em: any) => em.id === id);
+                setSelectedCode(email?.short_link || '');
+              }}
               MenuProps={{
                 PaperProps: {
-                  elevation: 4,
+                  elevation: 5,
                   sx: {
-                    boxShadow: '0px 4px 12px rgba(0,0,0,0.15)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                    borderRadius: 1.5,
                   },
                 },
               }}
@@ -169,15 +190,20 @@ export default function SaveButton() {
             </Select>
           </FormControl>
         </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={() => setUpdateDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpdateSubmit} disabled={!selectedId}>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="outlined" onClick={() => setUpdateDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateSubmit}
+            disabled={!selectedId || !selectedCode}
+          >
             Update
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Confirmation Snackbar */}
       <Snackbar
         open={!!message}
         autoHideDuration={5000}
