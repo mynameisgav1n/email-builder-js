@@ -13,11 +13,8 @@ import {
   ThemeProvider,
 } from '@mui/material';
 
-import { INSPECTOR_DRAWER_WIDTH } from './App/InspectorDrawer';
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
-import InspectorDrawer from './App/InspectorDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
-import { useInspectorDrawerOpen, useSamplesDrawerOpen } from './documents/editor/EditorContext';
 import theme from './theme';
 
 interface SavedEmail {
@@ -89,10 +86,8 @@ function MyEmailsPage() {
 }
 
 function LayoutWrapper() {
-  const inspectorOpen = useInspectorDrawerOpen();
   const samplesOpen = useSamplesDrawerOpen();
   const mlTransition = useDrawerTransition('margin-left', samplesOpen);
-  const mrTransition = useDrawerTransition('margin-right', inspectorOpen);
 
   return (
     <>
@@ -101,7 +96,6 @@ function LayoutWrapper() {
       <Stack
         sx={{
           marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          marginRight: inspectorOpen ? `${INSPECTOR_DRAWER_WIDTH}px` : 0,
           transition: [mlTransition, mrTransition].join(', '),
         }}
       >
