@@ -1,50 +1,39 @@
 import React, { useState } from 'react';
+import { IosShareOutlined } from '@mui/icons-material';
 import { IconButton, Snackbar, Tooltip } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import { useDocument } from '../../documents/editor/EditorContext';
 
-function generateRandomCode(length = 6) {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function ShortenButton() {
   const document = useDocument();
-  const [message, setMessage] = useState(null);
-  const [shortenedUrl, setShortenedUrl] = useState(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const onClick = async () => {
-    const doc = JSON.stringify(document);
-    const fullUrl = `https://emailbuilder.iynj.org/#code/${btoa(encodeURIComponent(doc))}`;
-    const code = generateRandomCode(6);
-
     try {
-      const res = await fetch("https://emailbuilder.iynj.org/api/shorten.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ full_url: fullUrl, code })
+      // Encode the current document state
+      const doc = JSON.stringify(document);
+      const encoded = btoa(encodeURIComponent(doc));
+      const fullUrl = `https://emailbuilder.iynj.org/#code/${encoded}`;
+
+      // Call the backend to shorten the URL
+      const response = await fetch('https://emailbuilder.iynj.org/api/shorten.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: fullUrl })
       });
 
-      const text = await res.text();
-      console.log("Response:", text);
+      const result = await response.json();
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${text}`);
+      if (response.ok && result.success) {
+        await navigator.clipboard.writeText(result.shortened_url);
+        setMessage('Shortened URL copied to clipboard!');
+      } else {
+        console.error('ShortenButton error:', result);
+        setMessage('Failed to shorten URL.');
       }
-
-      const shortUrl = `https://emailbuilder.iynj.org/email/${code}`;
-      await navigator.clipboard.writeText(shortUrl);
-      setShortenedUrl(shortUrl);
-      setMessage("Short URL copied to clipboard!");
-    } catch (error) {
-      console.error("ShortenButton error:", error);
-      setMessage("Error occurred. See console for details.");
+    } catch (err) {
+      console.error('ShortenButton error:', err);
+      setMessage('An error occurred.');
     }
   };
 
@@ -54,9 +43,9 @@ export default function ShortenButton() {
 
   return (
     <>
-      <Tooltip title="Shorten URL">
+      <Tooltip title="Shorten and Copy URL">
         <IconButton onClick={onClick}>
-          <ContentCopyIcon fontSize="small" />
+          <IosShareOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
       <Snackbar
