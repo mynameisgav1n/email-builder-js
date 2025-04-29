@@ -17,7 +17,7 @@ import { INSPECTOR_DRAWER_WIDTH } from './App/InspectorDrawer';
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
 import InspectorDrawer from './App/InspectorDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
-//import { EditorProvider, useInspectorDrawerOpen, useSamplesDrawerOpen } from './documents/editor/EditorContext';
+import { useInspectorDrawerOpen, useSamplesDrawerOpen } from './documents/editor/EditorContext';
 import theme from './theme';
 
 interface SavedEmail {
@@ -27,9 +27,9 @@ interface SavedEmail {
   created_at: string;
 }
 
-function useDrawerTransition(cssProperty: 'margin-left' | 'margin-right', open: boolean) {
+function useDrawerTransition(cssProp: 'margin-left' | 'margin-right', open: boolean) {
   const { transitions } = useTheme();
-  return transitions.create(cssProperty, {
+  return transitions.create(cssProp, {
     easing: !open ? transitions.easing.sharp : transitions.easing.easeOut,
     duration: !open ? transitions.duration.leavingScreen : transitions.duration.enteringScreen,
   });
@@ -88,23 +88,21 @@ function MyEmailsPage() {
   );
 }
 
-function MyEmailsWithLayout() {
-  const inspectorDrawerOpen = useInspectorDrawerOpen();
-  const samplesDrawerOpen = useSamplesDrawerOpen();
-
-  const marginLeftTransition = useDrawerTransition('margin-left', samplesDrawerOpen);
-  const marginRightTransition = useDrawerTransition('margin-right', inspectorDrawerOpen);
+function LayoutWrapper() {
+  const inspectorOpen = useInspectorDrawerOpen();
+  const samplesOpen = useSamplesDrawerOpen();
+  const mlTransition = useDrawerTransition('margin-left', samplesOpen);
+  const mrTransition = useDrawerTransition('margin-right', inspectorOpen);
 
   return (
     <>
       <InspectorDrawer />
       <SamplesDrawer />
-
       <Stack
         sx={{
-          marginRight: inspectorDrawerOpen ? `${INSPECTOR_DRAWER_WIDTH}px` : 0,
-          marginLeft: samplesDrawerOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          transition: [marginLeftTransition, marginRightTransition].join(', '),
+          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
+          marginRight: inspectorOpen ? `${INSPECTOR_DRAWER_WIDTH}px` : 0,
+          transition: [mlTransition, mrTransition].join(', '),
         }}
       >
         <MyEmailsPage />
@@ -117,6 +115,8 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <LayoutWrapper />
     </ThemeProvider>
   </React.StrictMode>
 );
