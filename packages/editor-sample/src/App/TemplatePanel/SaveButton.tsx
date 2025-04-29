@@ -65,7 +65,7 @@ export default function SaveButton() {
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
       const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
-      setMessage(`Saved! Link: ${shortUrl}`);
+      setMessage(`Saved!`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -85,7 +85,7 @@ export default function SaveButton() {
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
       const shortUrl = `https://emailbuilder.iynj.org/${data.short_link}`;
-      setMessage(`Updated! Link: ${shortUrl}`);
+      setMessage(`Updated!`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
