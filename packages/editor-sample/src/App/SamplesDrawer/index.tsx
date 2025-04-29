@@ -66,16 +66,16 @@ export default function SamplesDrawer() {
           </Typography>
 
           <Stack alignItems="flex-start">
-            <SidebarButton href="/email-builder-js/#sample/default-template">Default Template</SidebarButton>
-            <SidebarButton href="/email-builder-js/#">Empty</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/welcome">[Extra] Welcome email</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/one-time-password">[Extra] One-time passcode (OTP)</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/reset-password">[Extra] Reset password</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/order-ecomerce">[Extra] E-commerce receipt</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/subscription-receipt">[Extra] Subscription receipt</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/reservation-reminder">[Extra] Reservation reminder</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/post-metrics-report">[Extra] Post metrics</SidebarButton>
-            <SidebarButton href="/email-builder-js/#sample/respond-to-message">[Extra] Respond to inquiry</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/default-template">Default Template</SidebarButton>
+            <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/welcome">[Extra] Welcome email</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/one-time-password">[Extra] One-time passcode (OTP)</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/reset-password">[Extra] Reset password</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/order-ecomerce">[Extra] E-commerce receipt</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/subscription-receipt">[Extra] Subscription receipt</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/reservation-reminder">[Extra] Reservation reminder</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/post-metrics-report">[Extra] Post metrics</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/respond-to-message">[Extra] Respond to inquiry</SidebarButton>
           </Stack>
 
           <Divider />
