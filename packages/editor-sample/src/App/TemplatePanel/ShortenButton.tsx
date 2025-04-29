@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { IosShareOutlined } from '@mui/icons-material';
-import { IconButton, Snackbar, Tooltip } from '@mui/material';
+import { IconButton, Tooltip } from '@mui/material';
+import LinkIcon from '@mui/icons-material/Link'; // or any icon you want
 
 import { useDocument } from '../../documents/editor/EditorContext';
 
@@ -9,27 +9,33 @@ export default function ShortenButton() {
   const [message, setMessage] = useState<string | null>(null);
 
   const onClick = async () => {
-    // Exactly your original logic
-    const encodedDoc = encodeURIComponent(JSON.stringify(document));
-    const base64Encoded = btoa(encodedDoc);
-    const longUrl = `https://emailbuilder.iynj.org/#code/${base64Encoded}`;
+    try {
+      // 1. Grab the CURRENT document
+      const encoded = encodeURIComponent(JSON.stringify(document));
+      const base64 = btoa(encoded);
+      const longUrl = `https://emailbuilder.iynj.org/#code/${base64}`;
 
-    // Now send it to the shortener
-    const response = await fetch('/api/shorten.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: longUrl }),
-    });
+      // 2. POST it to the shortener
+      const response = await fetch('/api/shorten.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: longUrl }),
+      });
 
-    const data = await response.json();
+      const result = await response.json();
 
-    if (data.success) {
-      const shortUrl = `https://emailbuilder.iynj.org/email/${data.code}`;
-      await navigator.clipboard.writeText(shortUrl);
-      setMessage('Short URL copied to clipboard!');
-    } else {
-      console.error('Failed to shorten URL', data);
-      setMessage('Something went wrong generating short link.');
+      if (result.success && result.code) {
+        const shortUrl = `https://emailbuilder.iynj.org/email/${result.code}`;
+        await navigator.clipboard.writeText(shortUrl);
+        setMessage('Shortened URL copied to clipboard!');
+      } else {
+        setMessage('Error: Could not shorten URL');
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage('Error occurred');
     }
   };
 
@@ -39,17 +45,11 @@ export default function ShortenButton() {
 
   return (
     <>
-      <IconButton onClick={onClick}>
-        <Tooltip title="Shorten and copy link">
-          <IosShareOutlined fontSize="small" />
-        </Tooltip>
-      </IconButton>
-      <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        open={message !== null}
-        onClose={onClose}
-        message={message}
-      />
+      <Tooltip title="Shorten and Copy URL">
+        <IconButton onClick={onClick}>
+          <LinkIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
     </>
   );
 }
