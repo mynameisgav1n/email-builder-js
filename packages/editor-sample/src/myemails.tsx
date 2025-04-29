@@ -24,6 +24,7 @@ import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
 import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
 import theme from './theme';
+import { Stack } from '@mui/material';
 
 interface SavedEmail {
   id: number;
