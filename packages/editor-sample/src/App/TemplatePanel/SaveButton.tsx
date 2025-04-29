@@ -14,6 +14,7 @@ import {
   Select,
   MenuItem,
   Snackbar,
+  Stack,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
@@ -22,7 +23,7 @@ export default function SaveButton() {
   const document = useDocument();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mode, setMode] = useState<'new' | 'update' | null>(null);
-  const [emails, setEmails] = useState([]);
+  const [emails, setEmails] = useState<{ id: string; title: string }[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -42,9 +43,10 @@ export default function SaveButton() {
   const handleSave = async () => {
     try {
       const endpoint = mode === 'new' ? '/api/save-email.php' : '/api/update-email.php';
-      const payload = mode === 'new'
-        ? { title, full_url: fullUrl }
-        : { id: selectedId, full_url: fullUrl };
+      const payload =
+        mode === 'new'
+          ? { title, full_url: fullUrl }
+          : { id: selectedId, full_url: fullUrl };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -53,7 +55,16 @@ export default function SaveButton() {
       });
 
       if (!res.ok) throw new Error('Save failed');
-      setMessage(mode === 'new' ? 'Email saved.' : 'Email updated.');
+
+      const data = await res.json();
+      const shortUrl = `https://emailbuilder.iynj.org/${data.short_link}`;
+
+      setMessage(
+        mode === 'new'
+          ? `Saved! Link: ${shortUrl}`
+          : `Updated! Link: ${shortUrl}`
+      );
+
       setDialogOpen(false);
       setMode(null);
       setTitle('');
@@ -101,8 +112,10 @@ export default function SaveButton() {
                 label="Select Email"
                 onChange={(e) => setSelectedId(e.target.value)}
               >
-                {emails.map((email: any) => (
-                  <MenuItem key={email.id} value={email.id}>{email.title}</MenuItem>
+                {emails.map((email) => (
+                  <MenuItem key={email.id} value={email.id}>
+                    {email.title}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -112,14 +125,22 @@ export default function SaveButton() {
         {mode && (
           <DialogActions>
             <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={(mode === 'new' && !title.trim()) || (mode === 'update' && !selectedId)}>Save</Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                (mode === 'new' && !title.trim()) ||
+                (mode === 'update' && !selectedId)
+              }
+            >
+              Save
+            </Button>
           </DialogActions>
         )}
       </Dialog>
 
       <Snackbar
         open={!!message}
-        autoHideDuration={4000}
+        autoHideDuration={6000}
         onClose={() => setMessage(null)}
         message={message}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
