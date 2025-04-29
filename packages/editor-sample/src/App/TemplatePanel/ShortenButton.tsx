@@ -1,57 +1,52 @@
 import React, { useState } from 'react';
-import { IosShareOutlined } from '@mui/icons-material';
-import { IconButton, Snackbar, Tooltip } from '@mui/material';
-
+import {
+  IconButton,
+  Snackbar,
+  Tooltip,
+} from '@mui/material';
+import { LinkOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function ShortenButton() {
   const document = useDocument();
   const [message, setMessage] = useState<string | null>(null);
 
-  const onClick = async () => {
+  const handleClick = async () => {
     try {
-      // Encode the current document state
-      const doc = JSON.stringify(document);
-      const encoded = btoa(encodeURIComponent(doc));
-      const fullUrl = `https://emailbuilder.iynj.org/#code/${encoded}`;
+      const encoded = encodeURIComponent(JSON.stringify(document));
 
-      // Call the backend to shorten the URL
-      const response = await fetch('https://emailbuilder.iynj.org/api/shorten.php', {
+      const res = await fetch('/api/shorten.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: fullUrl })
+        body: JSON.stringify({ encoded }),
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        await navigator.clipboard.writeText(result.shortened_url);
-        setMessage('Shortened URL copied to clipboard!');
-      } else {
-        console.error('ShortenButton error:', result);
-        setMessage('Failed to shorten URL.');
+      if (!res.ok) {
+        throw new Error('Shorten failed');
       }
-    } catch (err) {
-      console.error('ShortenButton error:', err);
-      setMessage('An error occurred.');
-    }
-  };
 
-  const onClose = () => {
-    setMessage(null);
+      const data = await res.json();
+      const fullLink = `https://emailbuilder.iynj.org/${data.short}`;
+
+      await navigator.clipboard.writeText(fullLink);
+      setMessage(`Short link copied! ${fullLink}`);
+    } catch (err) {
+      console.error(err);
+      setMessage('Failed to generate short link.');
+    }
   };
 
   return (
     <>
       <Tooltip title="Shorten and Copy URL">
-        <IconButton onClick={onClick}>
-          <IosShareOutlined fontSize="small" />
+        <IconButton onClick={handleClick} color="primary">
+          <LinkOutlined />
         </IconButton>
       </Tooltip>
       <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        open={message !== null}
-        onClose={onClose}
+        open={!!message}
+        autoHideDuration={4000}
+        onClose={() => setMessage(null)}
         message={message}
       />
     </>
