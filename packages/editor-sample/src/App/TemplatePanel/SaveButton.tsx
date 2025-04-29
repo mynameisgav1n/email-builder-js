@@ -84,7 +84,7 @@ export default function SaveButton() {
 
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
-      const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
+      const shortUrl = `https://emailbuilder.iynj.org/${data.short_link}`;
       setMessage(`Updated! Link: ${shortUrl}`);
     } catch (err) {
       console.error(err);
