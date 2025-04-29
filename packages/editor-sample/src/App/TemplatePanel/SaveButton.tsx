@@ -1,42 +1,54 @@
-import React, { useState } from 'react';
-import { CloudUploadOutlined } from '@mui/icons-material';
-import { IconButton, Snackbar, Tooltip } from '@mui/material';
-
+import React from 'react';
+import { Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
-  const [message, setMessage] = useState<string | null>(null);
+  const [open, setOpen] = React.useState(false);
+  const [title, setTitle] = React.useState('');
 
-  const onClick = async () => {
-    try {
-      const c = encodeURIComponent(JSON.stringify(document));
-      const generatedUrl = `${window.location.origin}${window.location.pathname}#code/${btoa(c)}`;
+  const handleClickOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
-      window.open(`https://inspireyouthnj.org/admin/myemails/submit?url=${encodeURIComponent(generatedUrl)}`, '_blank');
-    } catch (error) {
-      console.error('Failed to save:', error);
-      setMessage('Failed to generate URL.');
-    }
-  };
+  const handleSave = async () => {
+    const encoded = encodeURIComponent(JSON.stringify(document));
+    const shortRes = await fetch('/shorten.php', {
+      method: 'POST',
+      body: JSON.stringify({ encoded }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const { short } = await shortRes.json();
 
-  const onClose = () => {
-    setMessage(null);
+    await fetch('/api/save-email.php', {
+      method: 'POST',
+      body: JSON.stringify({ title, short_link: short }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    handleClose();
+    alert('Email saved!');
   };
 
   return (
     <>
-      <Tooltip title="Save to My Emails">
-        <IconButton onClick={onClick}>
-          <CloudUploadOutlined fontSize="small" />
-        </IconButton>
-      </Tooltip>
-      <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        open={message !== null}
-        onClose={onClose}
-        message={message}
-      />
+      <Button variant="outlined" onClick={handleClickOpen}>Save</Button>
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Save Email</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            label="Title"
+            fullWidth
+            variant="outlined"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={!title}>Save</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
