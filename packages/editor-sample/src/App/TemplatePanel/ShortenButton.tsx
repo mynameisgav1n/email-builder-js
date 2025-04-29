@@ -14,22 +14,21 @@ export default function ShortenButton() {
   const handleClick = async () => {
     try {
       const encoded = encodeURIComponent(JSON.stringify(document));
+      const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${btoa(encoded)}`;
 
       const res = await fetch('/api/shorten.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ encoded }),
+        body: JSON.stringify({ full_url: fullUrl }),
       });
 
-      if (!res.ok) {
-        throw new Error('Shorten failed');
-      }
+      if (!res.ok) throw new Error('Shortening failed');
 
       const data = await res.json();
-      const fullLink = `https://emailbuilder.iynj.org/${data.short}`;
+      const shortLink = `https://emailbuilder.iynj.org/${data.short}`;
 
-      await navigator.clipboard.writeText(fullLink);
-      setMessage(`Short link copied! ${fullLink}`);
+      await navigator.clipboard.writeText(shortLink);
+      setMessage(`Short link copied! ${shortLink}`);
     } catch (err) {
       console.error(err);
       setMessage('Failed to generate short link.');
@@ -38,12 +37,13 @@ export default function ShortenButton() {
 
   return (
     <>
-      <Tooltip title="Shorten and Copy URL">
+      <Tooltip title="Shorten and copy link">
         <IconButton onClick={handleClick} color="primary">
           <LinkOutlined />
         </IconButton>
       </Tooltip>
       <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         open={!!message}
         autoHideDuration={4000}
         onClose={() => setMessage(null)}
