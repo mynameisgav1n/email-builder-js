@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { IconButton, Tooltip } from '@mui/material';
-import LinkIcon from '@mui/icons-material/Link';
+import { IosShareOutlined } from '@mui/icons-material';
+import { IconButton, Snackbar, Tooltip } from '@mui/material';
+
 import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function ShortenButton() {
@@ -8,35 +9,47 @@ export default function ShortenButton() {
   const [message, setMessage] = useState<string | null>(null);
 
   const onClick = async () => {
-    const c = encodeURIComponent(JSON.stringify(document));
-    const fullUrl = `https://emailbuilder.iynj.org/#code/${btoa(c)}`;
+    // Exactly your original logic
+    const encodedDoc = encodeURIComponent(JSON.stringify(document));
+    const base64Encoded = btoa(encodedDoc);
+    const longUrl = `https://emailbuilder.iynj.org/#code/${base64Encoded}`;
 
-    const vanity = prompt("Custom code? (optional, leave blank for random)");
+    // Now send it to the shortener
+    const response = await fetch('/api/shorten.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: longUrl }),
+    });
 
-    try {
-      const response = await fetch('/api/shorten.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_url: fullUrl, vanity: vanity || undefined }),
-      });
-      const data = await response.json();
+    const data = await response.json();
 
-      if (data.success) {
-        await navigator.clipboard.writeText(data.short_url);
-        alert(`Shortened link copied to clipboard!\n\n${data.short_url}`);
-      } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      alert('Something went wrong.');
+    if (data.success) {
+      const shortUrl = `https://emailbuilder.iynj.org/email/${data.code}`;
+      await navigator.clipboard.writeText(shortUrl);
+      setMessage('Short URL copied to clipboard!');
+    } else {
+      console.error('Failed to shorten URL', data);
+      setMessage('Something went wrong generating short link.');
     }
   };
 
+  const onClose = () => {
+    setMessage(null);
+  };
+
   return (
-    <Tooltip title="Create Short Link">
+    <>
       <IconButton onClick={onClick}>
-        <LinkIcon fontSize="small" />
+        <Tooltip title="Shorten and copy link">
+          <IosShareOutlined fontSize="small" />
+        </Tooltip>
       </IconButton>
-    </Tooltip>
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        open={message !== null}
+        onClose={onClose}
+        message={message}
+      />
+    </>
   );
 }
