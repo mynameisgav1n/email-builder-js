@@ -17,7 +17,7 @@ import { INSPECTOR_DRAWER_WIDTH } from './App/InspectorDrawer';
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
 import InspectorDrawer from './App/InspectorDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
-import { EditorProvider, useInspectorDrawerOpen, useSamplesDrawerOpen } from './documents/editor/EditorContext';
+//import { EditorProvider, useInspectorDrawerOpen, useSamplesDrawerOpen } from './documents/editor/EditorContext';
 import theme from './theme';
 
 interface SavedEmail {
@@ -117,10 +117,6 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
-      <EditorProvider>
-        <CssBaseline />
-        <MyEmailsWithLayout />
-      </EditorProvider>
     </ThemeProvider>
   </React.StrictMode>
 );
