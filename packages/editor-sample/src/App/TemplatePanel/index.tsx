@@ -1,16 +1,27 @@
+// TemplatePanel.tsx
 import React from 'react';
 
 import { MonitorOutlined, PhoneIphoneOutlined } from '@mui/icons-material';
-import { Box, Stack, SxProps, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
+import {
+  Box,
+  Stack,
+  SxProps,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { Reader } from '@usewaypoint/email-builder';
 
 import EditorBlock from '../../documents/editor/EditorBlock';
 import {
   setSelectedScreenSize,
   useDocument,
+  useLoadedEmail,
   useSelectedMainTab,
   useSelectedScreenSize,
 } from '../../documents/editor/EditorContext';
+
 import ToggleInspectorPanelButton from '../InspectorDrawer/ToggleInspectorPanelButton';
 import ToggleSamplesPanelButton from '../SamplesDrawer/ToggleSamplesPanelButton';
 
@@ -28,10 +39,12 @@ export default function TemplatePanel() {
   const document = useDocument();
   const selectedMainTab = useSelectedMainTab();
   const selectedScreenSize = useSelectedScreenSize();
+  const loadedEmail = useLoadedEmail();
 
   let mainBoxSx: SxProps = {
     height: '100%',
   };
+
   if (selectedScreenSize === 'mobile') {
     mainBoxSx = {
       ...mainBoxSx,
@@ -96,11 +109,21 @@ export default function TemplatePanel() {
         <Stack px={2} direction="row" gap={2} width="100%" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={2}>
             <MainTabsGroup />
+            {loadedEmail?.created_at && (
+              <Typography variant="body2" color="text.secondary" fontWeight="medium" alignSelf="center">
+                Last Updated: {loadedEmail.created_at}
+              </Typography>
+            )}
           </Stack>
           <Stack direction="row" spacing={2}>
             <DownloadJson />
             <ImportJson />
-            <ToggleButtonGroup value={selectedScreenSize} exclusive size="small" onChange={handleScreenSizeChange}>
+            <ToggleButtonGroup
+              value={selectedScreenSize}
+              exclusive
+              size="small"
+              onChange={handleScreenSizeChange}
+            >
               <ToggleButton value="desktop">
                 <Tooltip title="Desktop view">
                   <MonitorOutlined fontSize="small" />
@@ -120,7 +143,9 @@ export default function TemplatePanel() {
         </Stack>
         <ToggleInspectorPanelButton />
       </Stack>
-      <Box sx={{ height: 'calc(100vh - 49px)', overflow: 'auto', minWidth: 370 }}>{renderMainPanel()}</Box>
+      <Box sx={{ height: 'calc(100vh - 49px)', overflow: 'auto', minWidth: 370 }}>
+        {renderMainPanel()}
+      </Box>
     </>
   );
 }
