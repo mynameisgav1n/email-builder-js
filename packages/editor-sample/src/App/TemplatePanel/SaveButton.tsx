@@ -9,12 +9,13 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  TextField,
   FormControl,
   InputLabel,
   Select,
   Snackbar,
   Stack,
-  MenuProps,
+  Paper,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
@@ -22,89 +23,129 @@ import { useDocument } from '../../documents/editor/EditorContext';
 export default function SaveButton() {
   const document = useDocument();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [titleDialogOpen, setTitleDialogOpen] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [emails, setEmails] = useState([]);
   const [selectedId, setSelectedId] = useState('');
+  const [title, setTitle] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
-  const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
+  const fullUrl = `https://emailbuilder.iynj.org/email/${encoded}`;
 
-  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleCloseMenu = () => {
+  const handleMenuClose = () => {
     setAnchorEl(null);
   };
 
-  const handleSaveNew = async () => {
-    handleCloseMenu();
+  const handleSaveNew = () => {
+    setAnchorEl(null);
+    setTitle('');
+    setTitleDialogOpen(true);
+  };
 
-    const title = prompt('Enter a title for your email:');
-    if (!title) return;
+  const handleSaveUpdate = () => {
+    setAnchorEl(null);
+    setUpdateDialogOpen(true);
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then((data) => setEmails(data))
+      .catch((err) => console.error('Failed to load emails:', err));
+  };
 
+  const handleSaveNewSubmit = async () => {
     try {
       const res = await fetch('/api/save-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, full_url: fullUrl }),
       });
-      if (!res.ok) throw new Error('Save failed.');
-      setMessage('Email saved!');
+
+      if (!res.ok) throw new Error('Save failed');
+      setMessage('Email saved successfully.');
     } catch (err) {
-      setMessage('Failed to save. Please try again.');
+      console.error(err);
+      setMessage('An error occurred while saving.');
+    } finally {
+      setTitleDialogOpen(false);
     }
   };
 
-  const handleUpdateExisting = () => {
-    handleCloseMenu();
-    setDialogOpen(true);
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then((data) => setEmails(data))
-      .catch((err) => console.error('Failed to fetch emails:', err));
-  };
-
-  const handleUpdate = async () => {
+  const handleUpdateSubmit = async () => {
     try {
       const res = await fetch('/api/update-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
       });
-      if (!res.ok) throw new Error('Update failed.');
-      setMessage('Email updated!');
-      setDialogOpen(false);
-      setSelectedId('');
+
+      if (!res.ok) throw new Error('Update failed');
+      setMessage('Email updated successfully.');
     } catch (err) {
-      setMessage('Failed to update. Please try again.');
+      console.error(err);
+      setMessage('An error occurred while updating.');
+    } finally {
+      setUpdateDialogOpen(false);
+      setSelectedId('');
     }
   };
 
   return (
     <>
       <Tooltip title="Save email">
-        <IconButton onClick={handleOpenMenu}>
+        <IconButton onClick={handleMenuOpen}>
           <CloudUploadOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
 
+      {/* New/Update Popup Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-        MenuListProps={{ disablePadding: true }}
-        PaperProps={{ style: { minWidth: 180 } } as MenuProps['PaperProps']}
+        onClose={handleMenuClose}
+        PaperProps={{
+          elevation: 4,
+          sx: {
+            mt: 1,
+            boxShadow: '0px 4px 10px rgba(0,0,0,0.2)',
+          },
+        }}
       >
         <MenuItem onClick={handleSaveNew}>Save as New</MenuItem>
-        <MenuItem onClick={handleUpdateExisting}>Update Existing</MenuItem>
+        <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
       </Menu>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <DialogTitle>Update Existing Email</DialogTitle>
+      {/* New Email Title Dialog */}
+      <Dialog open={titleDialogOpen} onClose={() => setTitleDialogOpen(false)}>
+        <DialogTitle>Save as New Email</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTitleDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleSaveNewSubmit}
+            disabled={!title.trim()}
+            variant="contained"
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Update Existing Email Dialog */}
+      <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
+        <DialogTitle>Update Saved Email</DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Select Email</InputLabel>
@@ -112,6 +153,14 @@ export default function SaveButton() {
               value={selectedId}
               label="Select Email"
               onChange={(e) => setSelectedId(e.target.value)}
+              MenuProps={{
+                PaperProps: {
+                  elevation: 4,
+                  sx: {
+                    boxShadow: '0px 4px 10px rgba(0,0,0,0.2)',
+                  },
+                },
+              }}
             >
               {emails.map((email: any) => (
                 <MenuItem key={email.id} value={email.id}>
@@ -122,13 +171,18 @@ export default function SaveButton() {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleUpdate} disabled={!selectedId}>
+          <Button onClick={() => setUpdateDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleUpdateSubmit}
+            disabled={!selectedId}
+            variant="contained"
+          >
             Update
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Notification Snackbar */}
       <Snackbar
         open={!!message}
         autoHideDuration={4000}
