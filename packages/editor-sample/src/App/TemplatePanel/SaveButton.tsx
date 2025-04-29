@@ -1,146 +1,137 @@
-// SaveButton.tsx
 import React, { useEffect, useState } from 'react';
 import {
   IconButton,
   Tooltip,
+  Menu,
+  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
   Snackbar,
   Stack,
+  MenuProps,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [mode, setMode] = useState<'new' | 'update' | null>(null);
-  const [emails, setEmails] = useState<{ id: string; title: string }[]>([]);
+  const [emails, setEmails] = useState([]);
   const [selectedId, setSelectedId] = useState('');
-  const [title, setTitle] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
   const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
 
-  useEffect(() => {
-    if (dialogOpen && mode === 'update') {
-      fetch('/api/list-emails.php')
-        .then(res => res.json())
-        .then(data => setEmails(data))
-        .catch(err => console.error('Failed to fetch emails:', err));
-    }
-  }, [dialogOpen, mode]);
+  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-  const handleSave = async () => {
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSaveNew = async () => {
+    handleCloseMenu();
+
+    const title = prompt('Enter a title for your email:');
+    if (!title) return;
+
     try {
-      const endpoint = mode === 'new' ? '/api/save-email.php' : '/api/update-email.php';
-      const payload =
-        mode === 'new'
-          ? { title, full_url: fullUrl }
-          : { id: selectedId, full_url: fullUrl };
-
-      const res = await fetch(endpoint, {
+      const res = await fetch('/api/save-email.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ title, full_url: fullUrl }),
       });
+      if (!res.ok) throw new Error('Save failed.');
+      setMessage('Email saved!');
+    } catch (err) {
+      setMessage('Failed to save. Please try again.');
+    }
+  };
 
-      if (!res.ok) throw new Error('Save failed');
+  const handleUpdateExisting = () => {
+    handleCloseMenu();
+    setDialogOpen(true);
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then((data) => setEmails(data))
+      .catch((err) => console.error('Failed to fetch emails:', err));
+  };
 
-      const data = await res.json();
-      const shortUrl = `https://emailbuilder.iynj.org/${data.short_link}`;
-
-      setMessage(
-        mode === 'new'
-          ? `Saved! Link: ${shortUrl}`
-          : `Updated! Link: ${shortUrl}`
-      );
-
+  const handleUpdate = async () => {
+    try {
+      const res = await fetch('/api/update-email.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
+      });
+      if (!res.ok) throw new Error('Update failed.');
+      setMessage('Email updated!');
       setDialogOpen(false);
-      setMode(null);
-      setTitle('');
       setSelectedId('');
     } catch (err) {
-      console.error(err);
-      setMessage('An error occurred while saving.');
+      setMessage('Failed to update. Please try again.');
     }
   };
 
   return (
     <>
       <Tooltip title="Save email">
-        <IconButton onClick={() => setDialogOpen(true)}>
+        <IconButton onClick={handleOpenMenu}>
           <CloudUploadOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
 
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+        MenuListProps={{ disablePadding: true }}
+        PaperProps={{ style: { minWidth: 180 } } as MenuProps['PaperProps']}
+      >
+        <MenuItem onClick={handleSaveNew}>Save as New</MenuItem>
+        <MenuItem onClick={handleUpdateExisting}>Update Existing</MenuItem>
+      </Menu>
+
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <DialogTitle>Save Email</DialogTitle>
+        <DialogTitle>Update Existing Email</DialogTitle>
         <DialogContent>
-          {!mode && (
-            <Stack spacing={2} mt={1}>
-              <Button variant="contained" onClick={() => setMode('new')}>Save as New</Button>
-              <Button variant="outlined" onClick={() => setMode('update')}>Update Existing</Button>
-            </Stack>
-          )}
-
-          {mode === 'new' && (
-            <TextField
-              autoFocus
-              fullWidth
-              label="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              sx={{ mt: 2 }}
-            />
-          )}
-
-          {mode === 'update' && (
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Select Email</InputLabel>
-              <Select
-                value={selectedId}
-                label="Select Email"
-                onChange={(e) => setSelectedId(e.target.value)}
-              >
-                {emails.map((email) => (
-                  <MenuItem key={email.id} value={email.id}>
-                    {email.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-        </DialogContent>
-
-        {mode && (
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleSave}
-              disabled={
-                (mode === 'new' && !title.trim()) ||
-                (mode === 'update' && !selectedId)
-              }
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Select Email</InputLabel>
+            <Select
+              value={selectedId}
+              label="Select Email"
+              onChange={(e) => setSelectedId(e.target.value)}
             >
-              Save
-            </Button>
-          </DialogActions>
-        )}
+              {emails.map((email: any) => (
+                <MenuItem key={email.id} value={email.id}>
+                  {email.title}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleUpdate} disabled={!selectedId}>
+            Update
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Snackbar
         open={!!message}
-        autoHideDuration={6000}
+        autoHideDuration={4000}
         onClose={() => setMessage(null)}
         message={message}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
