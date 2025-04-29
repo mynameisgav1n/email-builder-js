@@ -7,6 +7,7 @@ import {
   TextField,
   DialogActions,
   Button,
+  Snackbar,
   Tooltip,
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
@@ -17,6 +18,7 @@ export default function SaveButton() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleClickOpen = () => setOpen(true);
   const handleClose = () => {
@@ -30,28 +32,42 @@ export default function SaveButton() {
     setSaving(true);
 
     try {
-      // Call save-email.php with title only
-      const res = await fetch('/api/save-email.php', {
+      // Step 1: Encode the full URL
+      const encoded = encodeURIComponent(JSON.stringify(document));
+      const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${btoa(encoded)}`;
+
+      // Step 2: Get a shortened code
+      const shortenRes = await fetch('/api/shorten.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ full_url: fullUrl }),
       });
 
-      if (!res.ok) throw new Error('Save failed');
-      const data = await res.json();
+      if (!shortenRes.ok) throw new Error('Failed to shorten URL');
+      const { short } = await shortenRes.json();
 
-      alert(`Email saved! Your link: https://emailbuilder.iynj.org/${data.short}`);
+      // Step 3: Save it to saved_emails with title
+      const saveRes = await fetch('/api/save-email.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, short_link: short }),
+      });
+
+      if (!saveRes.ok) throw new Error('Failed to save to My Emails');
+
+      await navigator.clipboard.writeText(`https://emailbuilder.iynj.org/${short}`);
+      setMessage('Saved! Short link copied to clipboard.');
       handleClose();
     } catch (err) {
       console.error(err);
-      alert('Failed to save email. Try again.');
+      setMessage('Failed to save email.');
       setSaving(false);
     }
   };
 
   return (
     <>
-      <Tooltip title="Save Email">
+      <Tooltip title="Save to My Emails">
         <IconButton onClick={handleClickOpen} color="primary">
           <CloudUploadOutlined />
         </IconButton>
@@ -78,6 +94,14 @@ export default function SaveButton() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        open={!!message}
+        autoHideDuration={4000}
+        onClose={() => setMessage(null)}
+        message={message}
+      />
     </>
   );
 }
