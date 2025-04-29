@@ -11,7 +11,7 @@ import {
   CssBaseline,
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
-import theme from '../theme'; // adjust path if your theme.ts is elsewhere
+import theme from './theme'; // adjust path if your theme.ts is elsewhere
 
 interface SavedEmail {
   id: number;
