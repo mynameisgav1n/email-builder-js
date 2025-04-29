@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Button,
+  Divider,
+  Drawer,
+  Stack,
+  Typography
+} from '@mui/material';
 
-import { Box, Button, Divider, Drawer, Stack, Typography } from '@mui/material';
 import { useSamplesDrawerOpen } from '../../documents/editor/EditorContext';
 
 import SidebarButton from './SidebarButton';
@@ -10,6 +17,18 @@ export const SAMPLES_DRAWER_WIDTH = 240;
 
 export default function SamplesDrawer() {
   const samplesDrawerOpen = useSamplesDrawerOpen();
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/user.php')
+      .then((res) => res.json())
+      .then((data) => {
+        setUsername(data.username || 'Guest');
+      })
+      .catch(() => {
+        setUsername('Guest');
+      });
+  }, []);
 
   const handleSendEmailClick = () => {
     const subject = encodeURIComponent('Email Builder Help Needed');
@@ -43,7 +62,7 @@ export default function SamplesDrawer() {
           </Box>
 
           <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
-            IYNJ Email Builder
+            {username ? `Hi, ${username}` : '...'}
           </Typography>
 
           <Stack alignItems="flex-start">
@@ -81,7 +100,7 @@ export default function SamplesDrawer() {
             variant="contained"
             color="primary"
             sx={{ justifyContent: 'center' }}
-            onClick={handleSendEmailClick} // ✅ triggers mailto
+            onClick={handleSendEmailClick}
           >
             Send email for help
           </Button>
