@@ -20,6 +20,7 @@ import ImportJson from './ImportJson';
 import JsonPanel from './JsonPanel';
 import MainTabsGroup from './MainTabsGroup';
 import ShareButton from './ShareButton';
+import ShortenButton from './ShortenButton';
 import SaveButton from './SaveButton';
 import SendButton from './SendButton';
 
@@ -112,6 +113,7 @@ export default function TemplatePanel() {
               </ToggleButton>
             </ToggleButtonGroup>
             <ShareButton />
+            <ShortenButton />
             <SaveButton />
             <SendButton />
           </Stack>
