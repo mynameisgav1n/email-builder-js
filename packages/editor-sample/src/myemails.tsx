@@ -63,12 +63,28 @@ function MyEmailsPage() {
       });
 
       if (!res.ok) throw new Error('Delete failed');
-
-      // Update state after deletion
       setEmails((prev) => prev.filter((e) => e.short_link !== shortLink));
     } catch (err) {
       console.error('Delete error:', err);
       alert('Failed to delete email. Please try again.');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const confirmDelete = confirm('Are you sure you want to delete ALL of your saved emails? This cannot be undone.');
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch('/api/delete-all-emails.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) throw new Error('Delete all failed');
+      setEmails([]);
+    } catch (err) {
+      console.error('Delete all error:', err);
+      alert('Failed to delete all emails. Please try again.');
     }
   };
 
@@ -77,6 +93,18 @@ function MyEmailsPage() {
       <Typography variant="h5" fontWeight={600} mb={2}>
         My Saved Emails
       </Typography>
+
+      {emails.length > 0 && (
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={handleDeleteAll}
+          sx={{ mb: 2 }}
+        >
+          Delete All
+        </Button>
+      )}
 
       {loading ? (
         <CircularProgress />
@@ -91,7 +119,7 @@ function MyEmailsPage() {
                 <Typography variant="body2" color="text.secondary" mb={1}>
                   Saved on {new Date(email.created_at).toLocaleString()}
                 </Typography>
-                <Stack direction="row" spacing={2}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Link
                     href={`/${email.short_link}`}
                     target="_blank"
