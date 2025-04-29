@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import {
   Box,
   Card,
@@ -7,7 +8,10 @@ import {
   Link,
   Stack,
   CircularProgress,
+  CssBaseline,
 } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '../theme'; // adjust path if your theme.ts is elsewhere
 
 interface SavedEmail {
   id: number;
@@ -16,7 +20,7 @@ interface SavedEmail {
   created_at: string;
 }
 
-export default function MyEmailsPage() {
+function MyEmailsPage() {
   const [emails, setEmails] = useState<SavedEmail[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,3 +72,14 @@ export default function MyEmailsPage() {
     </Box>
   );
 }
+
+// Mount it
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+root.render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <MyEmailsPage />
+    </ThemeProvider>
+  </React.StrictMode>
+);
