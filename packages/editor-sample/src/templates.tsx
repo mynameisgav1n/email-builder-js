@@ -52,7 +52,7 @@ function TemplatesPage() {
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h5" fontWeight={600} mb={2}>
-        Public Templates
+        All Templates
       </Typography>
 
       {loading ? (
