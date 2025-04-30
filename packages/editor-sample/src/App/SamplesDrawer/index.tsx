@@ -140,6 +140,9 @@ export default function SamplesDrawer() {
             {/*<Typography variant="overline" gutterBottom>
               Pages
             </Typography>*/}
+            <Button size="small" href="/email-builder-js/templates.html">
+              All Templates
+            </Button>
             <Button size="small" href="/email-builder-js/myemails.html">
               My Emails
             </Button>
