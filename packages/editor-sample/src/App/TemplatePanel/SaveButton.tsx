@@ -1,3 +1,5 @@
+// SaveButton.tsx
+
 import React, { useEffect, useState } from 'react';
 import {
   IconButton,
@@ -20,6 +22,7 @@ import {
   useDocument,
   setDocument,
   setLoadedEmail,
+  setLoadedEmailId,
   setLoadedEmailTitle,
   useLoadedEmailId,
   useLoadedEmailTitle,
@@ -115,6 +118,7 @@ export default function SaveButton() {
         hour12: true,
       });
       setLoadedEmail(now);
+      setLoadedEmailId(data.id);
       setLoadedEmailTitle(title);
       setMessage(`Saved!`);
     } catch (err) {
@@ -142,6 +146,7 @@ export default function SaveButton() {
       });
 
       setLoadedEmail(now);
+      setLoadedEmailId(selectedId);
       const selected = emails.find((email) => email.id === selectedId);
       if (selected) setLoadedEmailTitle(selected.title);
 
@@ -176,6 +181,7 @@ export default function SaveButton() {
 
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
+      setLoadedEmailId(selected.id);
       setLoadedEmailTitle(selected.title);
       setMessage('Email loaded!');
     } catch (err) {
@@ -209,6 +215,7 @@ export default function SaveButton() {
         <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
       </Menu>
 
+      {/* Save As New Dialog */}
       <Dialog open={titleDialogOpen} onClose={() => setTitleDialogOpen(false)}>
         <DialogTitle>Save as New</DialogTitle>
         <DialogContent>
@@ -229,6 +236,7 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
+      {/* Update Dialog */}
       <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
         <DialogTitle>Update Existing Email</DialogTitle>
         <DialogContent>
@@ -255,6 +263,7 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
+      {/* Load Dialog */}
       <Dialog open={loadDialogOpen} onClose={() => setLoadDialogOpen(false)}>
         <DialogTitle>Load Saved Email</DialogTitle>
         <DialogContent>
