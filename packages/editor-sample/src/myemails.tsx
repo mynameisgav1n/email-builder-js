@@ -24,13 +24,13 @@ import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
 import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
 import theme from './theme';
-import { Stack } from '@mui/material';
 
 interface SavedEmail {
   id: number;
   short_link: string;
   title: string;
   created_at: string;
+  public: number;
 }
 
 function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
@@ -48,6 +48,7 @@ function MyEmailsPage() {
   const [renameTitle, setRenameTitle] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<null | string>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [confirmTogglePublic, setConfirmTogglePublic] = useState<null | SavedEmail>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -119,6 +120,29 @@ function MyEmailsPage() {
     }
   };
 
+  const handleTogglePublic = async (email: SavedEmail) => {
+    const updatedPublic = email.public === 1 ? 0 : 1;
+    try {
+      const res = await fetch('/api/toggle-public.php', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ short_link: email.short_link, public: updatedPublic }),
+      });
+
+      if (!res.ok) throw new Error('Failed to toggle public status');
+
+      setEmails((prev) =>
+        prev.map((e) =>
+          e.short_link === email.short_link ? { ...e, public: updatedPublic } : e
+        )
+      );
+      setMessage(`Email marked as ${updatedPublic ? 'public' : 'private'}.`);
+    } catch (err) {
+      console.error(err);
+      setMessage('Failed to update visibility.');
+    }
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h5" fontWeight={600} mb={2}>
@@ -175,6 +199,12 @@ function MyEmailsPage() {
                   >
                     Delete
                   </Button>
+                  <Button
+                    size="small"
+                    onClick={() => setConfirmTogglePublic(email)}
+                  >
+                    {email.public ? 'Make Private' : 'Make Public'}
+                  </Button>
                 </Stack>
               </CardContent>
             </Card>
@@ -206,7 +236,6 @@ function MyEmailsPage() {
         </DialogActions>
       </Dialog>
 
-
       {/* Confirm Delete Dialog */}
       <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
         <DialogTitle>Confirm Delete</DialogTitle>
@@ -237,6 +266,26 @@ function MyEmailsPage() {
             setConfirmDeleteAll(false);
           }}>
             Delete All
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirm Toggle Public Dialog */}
+      <Dialog open={!!confirmTogglePublic} onClose={() => setConfirmTogglePublic(null)}>
+        <DialogTitle>
+          {confirmTogglePublic?.public ? 'Make Private?' : 'Make Public?'}
+        </DialogTitle>
+        <DialogContent>
+          Are you sure you want to mark this email as{' '}
+          <strong>{confirmTogglePublic?.public ? 'private' : 'public'}</strong>?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmTogglePublic(null)}>Cancel</Button>
+          <Button onClick={() => {
+            handleTogglePublic(confirmTogglePublic!);
+            setConfirmTogglePublic(null);
+          }}>
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>
