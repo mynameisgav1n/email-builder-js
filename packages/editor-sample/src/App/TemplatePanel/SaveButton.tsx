@@ -133,12 +133,6 @@ export default function SaveButton() {
 
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
-
-      const now = new Date().toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        hour12: true,
-      });
-      setLoadedEmail(now);
       setMessage('Email loaded!');
     } catch (err) {
       console.error(err);
