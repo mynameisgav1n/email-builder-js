@@ -143,7 +143,6 @@ export default function SaveButton() {
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
       setMessage('Email loaded!');
-      setLoadedEmail(email.created_at); // ✅ Use saved date
       setLoadedEmailTitle(email.title);
     } catch (err) {
       console.error(err);
