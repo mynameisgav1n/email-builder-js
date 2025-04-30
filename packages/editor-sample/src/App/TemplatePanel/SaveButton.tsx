@@ -157,14 +157,14 @@ export default function SaveButton() {
     <>
       {/* Save Icon */}
       <Tooltip title="Save email">
-        <IconButton onClick={handleMenuOpen}>
+        <IconButton onClick={handleMenuOpen} color="primary">
           <CloudUploadOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
 
       {/* Load Icon */}
       <Tooltip title="Load saved email">
-        <IconButton onClick={handleLoadEmail}>
+        <IconButton onClick={handleLoadEmail} color="primary">
           <FolderOpenOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
