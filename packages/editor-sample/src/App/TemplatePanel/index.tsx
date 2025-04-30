@@ -107,7 +107,6 @@ export default function TemplatePanel() {
       >
         <ToggleSamplesPanelButton />
         <Stack px={2} direction="row" gap={2} width="100%" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={2}>
             <Stack direction="row" alignItems="center" spacing={2}>
               <MainTabsGroup />
               {loadedEmail && (
@@ -120,7 +119,7 @@ export default function TemplatePanel() {
                 </Typography>
               )}
             </Stack>
-
+          <Stack direction="row" spacing={2}>
             <DownloadJson />
             <ImportJson />
             <ToggleButtonGroup
