@@ -38,6 +38,7 @@ import SendButton from './SendButton';
 export default function TemplatePanel() {
   const document = useDocument();
   const selectedMainTab = useSelectedMainTab();
+  const loadedEmail = useLoadedEmail();
   const selectedScreenSize = useSelectedScreenSize();
   const loadedEmail = useLoadedEmail();
 
@@ -108,14 +109,19 @@ export default function TemplatePanel() {
         <ToggleSamplesPanelButton />
         <Stack px={2} direction="row" gap={2} width="100%" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={2}>
-            <MainTabsGroup />
-            {loadedEmail?.created_at && (
-              <Typography variant="body2" color="text.secondary" fontWeight="medium" alignSelf="center">
-                Last Updated: {loadedEmail.created_at}
-              </Typography>
-            )}
-          </Stack>
-          <Stack direction="row" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <MainTabsGroup />
+              {loadedEmail && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ ml: 1 }}
+                >
+                  Last Updated: {loadedEmail}
+                </Typography>
+              )}
+            </Stack>
+
             <DownloadJson />
             <ImportJson />
             <ToggleButtonGroup
