@@ -149,7 +149,12 @@ export default function SaveButton() {
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
       setLoadedEmailTitle(selected.title);
-      setLoadedEmail(selected.created_at || null); // Keep existing date, do not update
+      const formattedDate = new Date(selected.created_at).toLocaleString('en-US', {
+       timeZone: 'America/New_York',
+       hour12: true,
+      });
+      setLoadedEmail(formattedDate);
+ // Keep existing date, do not update
       setMessage('Email loaded!');
     } catch (err) {
       console.error(err);
