@@ -104,6 +104,13 @@ export default function SaveButton() {
         hour12: true,
       });
       setLoadedEmail(now);
+
+      // ✅ NEW: Set loaded email title based on selectedId
+      const selected = emails.find((email) => email.id === selectedId);
+      if (selected) {
+        setLoadedEmailTitle(selected.title);
+      }
+ 
       setMessage(`Updated!`);
     } catch (err) {
       console.error(err);
