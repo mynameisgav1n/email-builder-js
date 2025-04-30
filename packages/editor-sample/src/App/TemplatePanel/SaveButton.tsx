@@ -1,5 +1,3 @@
-// SaveButton.tsx
-
 import React, { useEffect, useState } from 'react';
 import {
   IconButton,
@@ -45,12 +43,6 @@ export default function SaveButton() {
   const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
   const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
 
-  const fetchEmails = async () => {
-    const res = await fetch('/api/list-emails.php');
-    const data = await res.json();
-    setEmails(data);
-  };
-
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -65,15 +57,21 @@ export default function SaveButton() {
     setTitleDialogOpen(true);
   };
 
-  const handleSaveUpdate = async () => {
+  const handleSaveUpdate = () => {
     setAnchorEl(null);
     setUpdateDialogOpen(true);
-    await fetchEmails();
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then((data) => setEmails(data))
+      .catch((err) => console.error('Failed to load emails:', err));
   };
 
-  const handleLoadEmail = async () => {
+  const handleLoadEmail = () => {
     setLoadDialogOpen(true);
-    await fetchEmails();
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then((data) => setEmails(data))
+      .catch((err) => console.error('Failed to load emails:', err));
   };
 
   const handleSaveToCurrent = async () => {
@@ -111,7 +109,7 @@ export default function SaveButton() {
       });
 
       const data = await res.json();
-      if (!data.short_link) throw new Error('Short link not returned');
+      if (!data.short_link || !data.id) throw new Error('Save response missing data');
 
       const now = new Date().toLocaleString('en-US', {
         timeZone: 'America/New_York',
@@ -120,7 +118,7 @@ export default function SaveButton() {
 
       setLoadedEmail(now);
       setLoadedEmailTitle(title);
-      setLoadedEmailId(data.id); // ✅ set ID so current save works
+      setLoadedEmailId(data.id); // ✅ Enables "Save to Current Email"
       setMessage('Saved!');
     } catch (err) {
       console.error(err);
@@ -146,13 +144,11 @@ export default function SaveButton() {
         hour12: true,
       });
 
-      const selected = emails.find((email) => email.id === selectedId);
-      if (selected) {
-        setLoadedEmailTitle(selected.title);
-        setLoadedEmailId(selected.id);
-      }
-
       setLoadedEmail(now);
+      setLoadedEmailId(selectedId);
+      const selected = emails.find((email) => email.id === selectedId);
+      if (selected) setLoadedEmailTitle(selected.title);
+
       setMessage('Updated!');
     } catch (err) {
       console.error(err);
@@ -184,15 +180,8 @@ export default function SaveButton() {
 
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
-
-      const formatted = new Date(selected.created_at).toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        hour12: true,
-      });
-
-      setLoadedEmail(formatted);
       setLoadedEmailTitle(selected.title);
-      setLoadedEmailId(selected.id);
+      setLoadedEmailId(selected.id); // ✅ Track the ID for future "save to current"
       setMessage('Email loaded!');
     } catch (err) {
       console.error(err);
