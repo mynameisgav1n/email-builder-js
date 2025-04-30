@@ -40,7 +40,6 @@ export default function TemplatePanel() {
   const selectedMainTab = useSelectedMainTab();
   const loadedEmail = useLoadedEmail();
   const selectedScreenSize = useSelectedScreenSize();
-  const loadedEmail = useLoadedEmail();
 
   let mainBoxSx: SxProps = {
     height: '100%',
