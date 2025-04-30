@@ -95,10 +95,14 @@ export default function SamplesDrawer() {
           </Box>
 
           <Stack alignItems="flex-start">
+            <Typography variant="overline" gutterBottom>
+              Templates:
+            </Typography>
             <SidebarButton href="/email-builder-js#sample/default-template">
               Default Template
             </SidebarButton>
             <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
+            <Divider />
             <SidebarButton href="/email-builder-js#sample/welcome">
               [Extra] Welcome email
             </SidebarButton>
