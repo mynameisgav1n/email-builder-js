@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { CloudUploadOutlined } from '@mui/icons-material';
 import { useDocument } from '../../documents/editor/EditorContext';
+import { setLoadedEmail } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
@@ -65,7 +66,12 @@ export default function SaveButton() {
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
       const shortUrl = `https://emailbuilder.iynj.org/email/${data.short_link}`;
+      setLoadedEmail(now);
       setMessage(`Saved!`);
+      const now = new Date().toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        hour12: true,
+      });
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -86,6 +92,12 @@ export default function SaveButton() {
       if (!data.short_link) throw new Error('Short link not returned');
       const shortUrl = `https://emailbuilder.iynj.org/${data.short_link}`;
       setMessage(`Updated!`);
+      const now = new Date().toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        hour12: true,
+      });
+setLoadedEmail(now);
+
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
