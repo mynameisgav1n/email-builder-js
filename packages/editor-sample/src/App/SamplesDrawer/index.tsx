@@ -8,7 +8,7 @@ import {
   Typography
 } from '@mui/material';
 
-import { useSamplesDrawerOpen } from '../../documents/editor/EditorContext';
+import { useSamplesDrawerOpen, useLoadedEmailTitle } from '../../documents/editor/EditorContext';
 
 import SidebarButton from './SidebarButton';
 import logo from './waypoint.svg';
@@ -17,6 +17,7 @@ export const SAMPLES_DRAWER_WIDTH = 240;
 
 export default function SamplesDrawer() {
   const samplesDrawerOpen = useSamplesDrawerOpen();
+  const loadedEmailTitle = useLoadedEmailTitle();
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,7 +63,11 @@ export default function SamplesDrawer() {
           </Box>
 
           <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
-            {username ? `Welcome, ${username}!` : '...'}
+            {loadedEmailTitle
+              ? `Editing: ${loadedEmailTitle}`
+              : username
+              ? `Welcome, ${username}!`
+              : 'Email Builder'}
           </Typography>
 
           <Stack alignItems="flex-start">
