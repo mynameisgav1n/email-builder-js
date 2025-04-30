@@ -1,5 +1,4 @@
- // SaveButton.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   IconButton,
   Tooltip,
@@ -19,13 +18,18 @@ import {
 import { CloudUploadOutlined, FolderOpenOutlined } from '@mui/icons-material';
 import {
   useDocument,
-  setLoadedEmail,
   setDocument,
+  setLoadedEmail,
   setLoadedEmailTitle,
+  useLoadedEmailId,
+  useLoadedEmailTitle,
 } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
+  const loadedEmailId = useLoadedEmailId();
+  const loadedEmailTitle = useLoadedEmailTitle();
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
@@ -46,13 +50,6 @@ export default function SaveButton() {
     setAnchorEl(null);
   };
 
-  const fetchEmails = () => {
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then(setEmails)
-      .catch((err) => console.error('Failed to load emails:', err));
-  };
-
   const handleSaveNew = () => {
     setAnchorEl(null);
     setTitle('');
@@ -62,12 +59,44 @@ export default function SaveButton() {
   const handleSaveUpdate = () => {
     setAnchorEl(null);
     setUpdateDialogOpen(true);
-    fetchEmails();
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then((data) => setEmails(data))
+      .catch((err) => console.error('Failed to load emails:', err));
   };
 
   const handleLoadEmail = () => {
     setLoadDialogOpen(true);
-    fetchEmails();
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then((data) => setEmails(data))
+      .catch((err) => console.error('Failed to load emails:', err));
+  };
+
+  const handleSaveToCurrent = async () => {
+    try {
+      const res = await fetch('/api/update-email.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: loadedEmailId, full_url: fullUrl }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error('Update failed');
+
+      const now = new Date().toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        hour12: true,
+      });
+
+      setLoadedEmail(now);
+      setMessage('Saved to current email!');
+    } catch (err) {
+      console.error(err);
+      setMessage('Failed to save to current email.');
+    } finally {
+      setAnchorEl(null);
+    }
   };
 
   const handleSaveNewSubmit = async () => {
@@ -77,6 +106,7 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, full_url: fullUrl }),
       });
+
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
 
@@ -84,10 +114,9 @@ export default function SaveButton() {
         timeZone: 'America/New_York',
         hour12: true,
       });
-
       setLoadedEmail(now);
       setLoadedEmailTitle(title);
-      setMessage('Saved!');
+      setMessage(`Saved!`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -103,6 +132,7 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
       });
+
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
 
@@ -112,13 +142,10 @@ export default function SaveButton() {
       });
 
       setLoadedEmail(now);
-
       const selected = emails.find((email) => email.id === selectedId);
-      if (selected) {
-        setLoadedEmailTitle(selected.title);
-      }
+      if (selected) setLoadedEmailTitle(selected.title);
 
-      setMessage('Updated!');
+      setMessage(`Updated!`);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
@@ -130,8 +157,8 @@ export default function SaveButton() {
 
   const handleLoadSubmit = async () => {
     try {
-      const selected = emails.find((email) => email.id === selectedId);
-      if (!selected || !selected.short_link) throw new Error('Missing short_link');
+      const selected = emails.find((e: any) => e.id === selectedId);
+      if (!selected || !selected.short_link) throw new Error('No short_link');
 
       const shortCode = selected.short_link.replace(/^email\//, '');
 
@@ -140,21 +167,16 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: shortCode }),
       });
+
       const { full_url } = await res.json();
-      if (!full_url) throw new Error('Missing full_url');
+      if (!full_url) throw new Error('No full_url returned');
 
       const hashMatch = full_url.match(/#code\/([A-Za-z0-9+/=]+)/);
-      if (!hashMatch) throw new Error('No encoded document in URL');
+      if (!hashMatch) throw new Error('No code found in full_url');
 
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
       setLoadedEmailTitle(selected.title);
-      const formattedDate = new Date(selected.created_at).toLocaleString('en-US', {
-       timeZone: 'America/New_York',
-       hour12: true,
-      });
-      setLoadedEmail(formattedDate);
- // Keep existing date, do not update
       setMessage('Email loaded!');
     } catch (err) {
       console.error(err);
@@ -180,6 +202,9 @@ export default function SaveButton() {
       </Tooltip>
 
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        {loadedEmailId && (
+          <MenuItem onClick={handleSaveToCurrent}>Save to Current Email</MenuItem>
+        )}
         <MenuItem onClick={handleSaveNew}>Save as New</MenuItem>
         <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
       </Menu>
