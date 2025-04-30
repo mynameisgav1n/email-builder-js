@@ -21,6 +21,7 @@ interface PublicTemplate {
   short_link: string;
   title: string;
   created_at: string;
+  username: string;
 }
 
 function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
@@ -64,6 +65,9 @@ function TemplatesPage() {
             <Card key={template.id} variant="outlined">
               <CardContent>
                 <Typography variant="h6">{template.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Created by {template.username}
+                </Typography>
                 <Typography variant="body2" color="text.secondary" mb={1}>
                   Published on {new Date(template.created_at).toLocaleString()}
                 </Typography>
