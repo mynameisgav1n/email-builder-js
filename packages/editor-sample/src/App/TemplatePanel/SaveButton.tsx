@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { CloudUploadOutlined, FolderOpenOutlined } from '@mui/icons-material'; // ✅ Add folder icon
 import { useDocument, setLoadedEmail, setDocument } from '../../documents/editor/EditorContext';
+import { setLoadedEmailTitle } from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
@@ -79,6 +80,7 @@ export default function SaveButton() {
       });
       setLoadedEmail(now);
       setMessage(`Saved!`);
+      setLoadedEmailTitle(title);
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -134,6 +136,7 @@ export default function SaveButton() {
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
       setMessage('Email loaded!');
+      setLoadedEmailTitle(selected.title);
     } catch (err) {
       console.error(err);
       setMessage('Failed to load email.');
