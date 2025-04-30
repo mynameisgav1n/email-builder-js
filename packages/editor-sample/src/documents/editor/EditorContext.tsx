@@ -16,6 +16,7 @@ type TValue = {
   samplesDrawerOpen: boolean;
 
   loadedEmail: string | null;
+  loadedEmailTitle: string | null; // ✅ NEW
 };
 
 const editorStateStore = create<TValue>(() => ({
@@ -27,6 +28,7 @@ const editorStateStore = create<TValue>(() => ({
   inspectorDrawerOpen: true,
   samplesDrawerOpen: true,
   loadedEmail: null,
+  loadedEmailTitle: null, // ✅ NEW
 }));
 
 export function useDocument() {
@@ -116,4 +118,13 @@ export function useLoadedEmail() {
 
 export function setLoadedEmail(loadedEmail: string | null) {
   return editorStateStore.setState({ loadedEmail });
+}
+
+// ✅ NEW: Set and use loaded email title
+export function useLoadedEmailTitle() {
+  return editorStateStore((s) => s.loadedEmailTitle);
+}
+
+export function setLoadedEmailTitle(loadedEmailTitle: string | null) {
+  return editorStateStore.setState({ loadedEmailTitle });
 }
