@@ -93,7 +93,7 @@ export default function SamplesDrawer() {
                 : ''}
             </Typography>
           </Box>
-
+          <Divider />
           <Stack alignItems="flex-start">
             <Typography variant="overline" gutterBottom>
               IYNJ Templates
@@ -106,7 +106,7 @@ export default function SamplesDrawer() {
             <Divider />
           <Stack alignItems="flex-start">
             <Typography variant="overline" gutterBottom>
-              Extra templates to help you learn
+              Random Templates
             </Typography>
             <SidebarButton href="/email-builder-js#sample/welcome">
               Welcome email
@@ -137,9 +137,9 @@ export default function SamplesDrawer() {
           <Divider />
 
           <Stack>
-            <Typography variant="overline" gutterBottom>
+            {/*<Typography variant="overline" gutterBottom>
               Pages
-            </Typography>
+            </Typography>*/}
             <Button size="small" href="/email-builder-js/myemails.html">
               My Emails
             </Button>
