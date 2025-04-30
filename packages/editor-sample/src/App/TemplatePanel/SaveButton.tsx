@@ -22,8 +22,8 @@ import {
   useDocument,
   setDocument,
   setLoadedEmail,
-  setLoadedEmailId,
   setLoadedEmailTitle,
+  setLoadedEmailId,
   useLoadedEmailId,
   useLoadedEmailTitle,
 } from '../../documents/editor/EditorContext';
@@ -45,6 +45,12 @@ export default function SaveButton() {
   const encoded = btoa(encodeURIComponent(JSON.stringify(document)));
   const fullUrl = `https://emailbuilder.iynj.org/email-builder-js#code/${encoded}`;
 
+  const fetchEmails = async () => {
+    const res = await fetch('/api/list-emails.php');
+    const data = await res.json();
+    setEmails(data);
+  };
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -59,21 +65,15 @@ export default function SaveButton() {
     setTitleDialogOpen(true);
   };
 
-  const handleSaveUpdate = () => {
+  const handleSaveUpdate = async () => {
     setAnchorEl(null);
     setUpdateDialogOpen(true);
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then((data) => setEmails(data))
-      .catch((err) => console.error('Failed to load emails:', err));
+    await fetchEmails();
   };
 
-  const handleLoadEmail = () => {
+  const handleLoadEmail = async () => {
     setLoadDialogOpen(true);
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then((data) => setEmails(data))
-      .catch((err) => console.error('Failed to load emails:', err));
+    await fetchEmails();
   };
 
   const handleSaveToCurrent = async () => {
@@ -117,10 +117,11 @@ export default function SaveButton() {
         timeZone: 'America/New_York',
         hour12: true,
       });
+
       setLoadedEmail(now);
-      setLoadedEmailId(data.id);
       setLoadedEmailTitle(title);
-      setMessage(`Saved!`);
+      setLoadedEmailId(data.id); // ✅ set ID so current save works
+      setMessage('Saved!');
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -145,12 +146,14 @@ export default function SaveButton() {
         hour12: true,
       });
 
-      setLoadedEmail(now);
-      setLoadedEmailId(selectedId);
       const selected = emails.find((email) => email.id === selectedId);
-      if (selected) setLoadedEmailTitle(selected.title);
+      if (selected) {
+        setLoadedEmailTitle(selected.title);
+        setLoadedEmailId(selected.id);
+      }
 
-      setMessage(`Updated!`);
+      setLoadedEmail(now);
+      setMessage('Updated!');
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
@@ -181,8 +184,15 @@ export default function SaveButton() {
 
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
-      setLoadedEmailId(selected.id);
+
+      const formatted = new Date(selected.created_at).toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        hour12: true,
+      });
+
+      setLoadedEmail(formatted);
       setLoadedEmailTitle(selected.title);
+      setLoadedEmailId(selected.id);
       setMessage('Email loaded!');
     } catch (err) {
       console.error(err);
@@ -215,7 +225,6 @@ export default function SaveButton() {
         <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
       </Menu>
 
-      {/* Save As New Dialog */}
       <Dialog open={titleDialogOpen} onClose={() => setTitleDialogOpen(false)}>
         <DialogTitle>Save as New</DialogTitle>
         <DialogContent>
@@ -236,7 +245,6 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
-      {/* Update Dialog */}
       <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
         <DialogTitle>Update Existing Email</DialogTitle>
         <DialogContent>
@@ -263,7 +271,6 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
-      {/* Load Dialog */}
       <Dialog open={loadDialogOpen} onClose={() => setLoadDialogOpen(false)}>
         <DialogTitle>Load Saved Email</DialogTitle>
         <DialogContent>
