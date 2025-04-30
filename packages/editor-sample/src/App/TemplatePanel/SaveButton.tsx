@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+ // SaveButton.tsx
+import React, { useState } from 'react';
 import {
   IconButton,
   Tooltip,
@@ -15,16 +16,20 @@ import {
   Select,
   Snackbar,
 } from '@mui/material';
-import { CloudUploadOutlined, FolderOpenOutlined } from '@mui/icons-material'; // ✅ Add folder icon
-import { useDocument, setLoadedEmail, setDocument } from '../../documents/editor/EditorContext';
-import { setLoadedEmailTitle } from '../../documents/editor/EditorContext';
+import { CloudUploadOutlined, FolderOpenOutlined } from '@mui/icons-material';
+import {
+  useDocument,
+  setLoadedEmail,
+  setDocument,
+  setLoadedEmailTitle,
+} from '../../documents/editor/EditorContext';
 
 export default function SaveButton() {
   const document = useDocument();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [titleDialogOpen, setTitleDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const [loadDialogOpen, setLoadDialogOpen] = useState(false); // ✅ for load
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [emails, setEmails] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [title, setTitle] = useState('');
@@ -41,6 +46,13 @@ export default function SaveButton() {
     setAnchorEl(null);
   };
 
+  const fetchEmails = () => {
+    fetch('/api/list-emails.php')
+      .then((res) => res.json())
+      .then(setEmails)
+      .catch((err) => console.error('Failed to load emails:', err));
+  };
+
   const handleSaveNew = () => {
     setAnchorEl(null);
     setTitle('');
@@ -50,18 +62,12 @@ export default function SaveButton() {
   const handleSaveUpdate = () => {
     setAnchorEl(null);
     setUpdateDialogOpen(true);
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then((data) => setEmails(data))
-      .catch((err) => console.error('Failed to load emails:', err));
+    fetchEmails();
   };
 
   const handleLoadEmail = () => {
     setLoadDialogOpen(true);
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then((data) => setEmails(data))
-      .catch((err) => console.error('Failed to load emails:', err));
+    fetchEmails();
   };
 
   const handleSaveNewSubmit = async () => {
@@ -71,16 +77,17 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, full_url: fullUrl }),
       });
-
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
+
       const now = new Date().toLocaleString('en-US', {
         timeZone: 'America/New_York',
         hour12: true,
       });
+
       setLoadedEmail(now);
-      setMessage(`Saved!`);
       setLoadedEmailTitle(title);
+      setMessage('Saved!');
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while saving.');
@@ -96,22 +103,22 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedId, full_url: fullUrl }),
       });
-
       const data = await res.json();
       if (!data.short_link) throw new Error('Short link not returned');
+
       const now = new Date().toLocaleString('en-US', {
         timeZone: 'America/New_York',
         hour12: true,
       });
+
       setLoadedEmail(now);
 
-      // ✅ NEW: Set loaded email title based on selectedId
       const selected = emails.find((email) => email.id === selectedId);
       if (selected) {
         setLoadedEmailTitle(selected.title);
       }
- 
-      setMessage(`Updated!`);
+
+      setMessage('Updated!');
     } catch (err) {
       console.error(err);
       setMessage('An error occurred while updating.');
@@ -123,8 +130,8 @@ export default function SaveButton() {
 
   const handleLoadSubmit = async () => {
     try {
-      const selected = emails.find((e: any) => e.id === selectedId);
-      if (!selected || !selected.short_link) throw new Error('No short_link');
+      const selected = emails.find((email) => email.id === selectedId);
+      if (!selected || !selected.short_link) throw new Error('Missing short_link');
 
       const shortCode = selected.short_link.replace(/^email\//, '');
 
@@ -133,17 +140,17 @@ export default function SaveButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: shortCode }),
       });
-
       const { full_url } = await res.json();
-      if (!full_url) throw new Error('No full_url returned');
+      if (!full_url) throw new Error('Missing full_url');
 
       const hashMatch = full_url.match(/#code\/([A-Za-z0-9+/=]+)/);
-      if (!hashMatch) throw new Error('No code found in full_url');
+      if (!hashMatch) throw new Error('No encoded document in URL');
 
       const decoded = JSON.parse(decodeURIComponent(atob(hashMatch[1])));
       setDocument(decoded);
+      setLoadedEmailTitle(selected.title);
+      setLoadedEmail(selected.created_at || null); // Keep existing date, do not update
       setMessage('Email loaded!');
-      setLoadedEmailTitle(email.title);
     } catch (err) {
       console.error(err);
       setMessage('Failed to load email.');
@@ -155,27 +162,23 @@ export default function SaveButton() {
 
   return (
     <>
-      {/* Save Icon */}
       <Tooltip title="Save email">
         <IconButton onClick={handleMenuOpen} color="primary">
           <CloudUploadOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
 
-      {/* Load Icon */}
       <Tooltip title="Load saved email">
         <IconButton onClick={handleLoadEmail} color="primary">
           <FolderOpenOutlined fontSize="small" />
         </IconButton>
       </Tooltip>
 
-      {/* Save menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
         <MenuItem onClick={handleSaveNew}>Save as New</MenuItem>
         <MenuItem onClick={handleSaveUpdate}>Update Existing</MenuItem>
       </Menu>
 
-      {/* Save New Dialog */}
       <Dialog open={titleDialogOpen} onClose={() => setTitleDialogOpen(false)}>
         <DialogTitle>Save as New</DialogTitle>
         <DialogContent>
@@ -196,7 +199,6 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
-      {/* Update Dialog */}
       <Dialog open={updateDialogOpen} onClose={() => setUpdateDialogOpen(false)}>
         <DialogTitle>Update Existing Email</DialogTitle>
         <DialogContent>
@@ -223,7 +225,6 @@ export default function SaveButton() {
         </DialogActions>
       </Dialog>
 
-      {/* Load Dialog */}
       <Dialog open={loadDialogOpen} onClose={() => setLoadDialogOpen(false)}>
         <DialogTitle>Load Saved Email</DialogTitle>
         <DialogContent>
