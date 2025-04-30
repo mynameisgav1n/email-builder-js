@@ -17,7 +17,7 @@ type TValue = {
 
   loadedEmail: string | null;
   loadedEmailTitle: string | null;
-  loadedEmailId: string | null; // ✅ NEW
+  loadedEmailId: string | null;
 };
 
 const editorStateStore = create<TValue>(() => ({
@@ -30,39 +30,16 @@ const editorStateStore = create<TValue>(() => ({
   samplesDrawerOpen: true,
   loadedEmail: null,
   loadedEmailTitle: null,
-  loadedEmailId: null, // ✅ NEW
+  loadedEmailId: null,
 }));
 
+// Document & Block State
 export function useDocument() {
   return editorStateStore((s) => s.document);
 }
 
 export function useSelectedBlockId() {
   return editorStateStore((s) => s.selectedBlockId);
-}
-
-export function useSelectedScreenSize() {
-  return editorStateStore((s) => s.selectedScreenSize);
-}
-
-export function useSelectedMainTab() {
-  return editorStateStore((s) => s.selectedMainTab);
-}
-
-export function setSelectedMainTab(selectedMainTab: TValue['selectedMainTab']) {
-  return editorStateStore.setState({ selectedMainTab });
-}
-
-export function useSelectedSidebarTab() {
-  return editorStateStore((s) => s.selectedSidebarTab);
-}
-
-export function useInspectorDrawerOpen() {
-  return editorStateStore((s) => s.inspectorDrawerOpen);
-}
-
-export function useSamplesDrawerOpen() {
-  return editorStateStore((s) => s.samplesDrawerOpen);
 }
 
 export function setSelectedBlockId(selectedBlockId: TValue['selectedBlockId']) {
@@ -76,10 +53,6 @@ export function setSelectedBlockId(selectedBlockId: TValue['selectedBlockId']) {
     selectedSidebarTab,
     ...options,
   });
-}
-
-export function setSidebarTab(selectedSidebarTab: TValue['selectedSidebarTab']) {
-  return editorStateStore.setState({ selectedSidebarTab });
 }
 
 export function resetDocument(document: TValue['document']) {
@@ -100,9 +73,43 @@ export function setDocument(document: TValue['document']) {
   });
 }
 
+// Screen Size & Tabs
+export function useSelectedScreenSize() {
+  return editorStateStore((s) => s.selectedScreenSize);
+}
+
+export function setSelectedScreenSize(selectedScreenSize: TValue['selectedScreenSize']) {
+  return editorStateStore.setState({ selectedScreenSize });
+}
+
+export function useSelectedMainTab() {
+  return editorStateStore((s) => s.selectedMainTab);
+}
+
+export function setSelectedMainTab(selectedMainTab: TValue['selectedMainTab']) {
+  return editorStateStore.setState({ selectedMainTab });
+}
+
+export function useSelectedSidebarTab() {
+  return editorStateStore((s) => s.selectedSidebarTab);
+}
+
+export function setSidebarTab(selectedSidebarTab: TValue['selectedSidebarTab']) {
+  return editorStateStore.setState({ selectedSidebarTab });
+}
+
+// Drawer State
+export function useInspectorDrawerOpen() {
+  return editorStateStore((s) => s.inspectorDrawerOpen);
+}
+
 export function toggleInspectorDrawerOpen() {
   const inspectorDrawerOpen = !editorStateStore.getState().inspectorDrawerOpen;
   return editorStateStore.setState({ inspectorDrawerOpen });
+}
+
+export function useSamplesDrawerOpen() {
+  return editorStateStore((s) => s.samplesDrawerOpen);
 }
 
 export function toggleSamplesDrawerOpen() {
@@ -110,10 +117,7 @@ export function toggleSamplesDrawerOpen() {
   return editorStateStore.setState({ samplesDrawerOpen });
 }
 
-export function setSelectedScreenSize(selectedScreenSize: TValue['selectedScreenSize']) {
-  return editorStateStore.setState({ selectedScreenSize });
-}
-
+// Loaded Email State
 export function useLoadedEmail() {
   return editorStateStore((s) => s.loadedEmail);
 }
@@ -130,7 +134,6 @@ export function setLoadedEmailTitle(loadedEmailTitle: string | null) {
   return editorStateStore.setState({ loadedEmailTitle });
 }
 
-// ✅ NEW
 export function useLoadedEmailId() {
   return editorStateStore((s) => s.loadedEmailId);
 }
