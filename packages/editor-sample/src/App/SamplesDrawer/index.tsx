@@ -5,10 +5,13 @@ import {
   Divider,
   Drawer,
   Stack,
-  Typography
+  Typography,
 } from '@mui/material';
 
-import { useSamplesDrawerOpen, useLoadedEmailTitle } from '../../documents/editor/EditorContext';
+import {
+  useSamplesDrawerOpen,
+  useLoadedEmailTitle,
+} from '../../documents/editor/EditorContext';
 
 import SidebarButton from './SidebarButton';
 import logo from './waypoint.svg';
@@ -33,8 +36,13 @@ export default function SamplesDrawer() {
 
   const handleSendEmailClick = () => {
     const subject = encodeURIComponent('Email Builder Help Needed');
-    const body = encodeURIComponent(`Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below the line and I'll be more than happy to help you out as soon as I can!\n------\n\n`);
-    window.open(`mailto:tech@inspireyouthnj.org?subject=${subject}&body=${body}`, '_blank');
+    const body = encodeURIComponent(
+      `Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below the line and I'll be more than happy to help you out as soon as I can!\n------\n\n`
+    );
+    window.open(
+      `mailto:tech@inspireyouthnj.org?subject=${subject}&body=${body}`,
+      '_blank'
+    );
   };
 
   return (
@@ -46,41 +54,75 @@ export default function SamplesDrawer() {
         width: samplesDrawerOpen ? SAMPLES_DRAWER_WIDTH : 0,
       }}
     >
-      <Stack spacing={3} py={1} px={2} width={SAMPLES_DRAWER_WIDTH} justifyContent="space-between" height="100%">
-        <Stack spacing={2} sx={{ '& .MuiButtonBase-root': { width: '100%', justifyContent: 'flex-start' } }}>
-
-          <Box 
-            display="flex" 
-            justifyContent="center" 
+      <Stack
+        spacing={3}
+        py={1}
+        px={2}
+        width={SAMPLES_DRAWER_WIDTH}
+        justifyContent="space-between"
+        height="100%"
+      >
+        <Stack
+          spacing={2}
+          sx={{
+            '& .MuiButtonBase-root': {
+              width: '100%',
+              justifyContent: 'flex-start',
+            },
+          }}
+        >
+          <Box
+            display="flex"
+            justifyContent="center"
             alignItems="center"
             sx={{ pt: 2 }}
           >
-            <img 
-              src="https://static.iynj.org/fullLogo.png" 
-              alt="Inspire Youth NJ Logo" 
-              style={{ width: '80%', maxWidth: 150, marginBottom: 8 }} 
+            <img
+              src="https://static.iynj.org/fullLogo.png"
+              alt="Inspire Youth NJ Logo"
+              style={{ width: '80%', maxWidth: 150, marginBottom: 8 }}
             />
           </Box>
 
-          <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
-            {loadedEmailTitle
-              ? `Editing: ${loadedEmailTitle}`
-              : username
-              ? `Welcome, ${username}!`
-              : 'Email Builder'}
-          </Typography>
+          <Box sx={{ minHeight: 24 }}>
+            <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
+              {loadedEmailTitle
+                ? `Editing: ${loadedEmailTitle}`
+                : username
+                ? `Welcome, ${username}!`
+                : ''}
+            </Typography>
+          </Box>
 
           <Stack alignItems="flex-start">
-            <SidebarButton href="/email-builder-js#sample/default-template">Default Template</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/default-template">
+              Default Template
+            </SidebarButton>
             <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/welcome">[Extra] Welcome email</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/one-time-password">[Extra] One-time passcode (OTP)</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/reset-password">[Extra] Reset password</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/order-ecomerce">[Extra] E-commerce receipt</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/subscription-receipt">[Extra] Subscription receipt</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/reservation-reminder">[Extra] Reservation reminder</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/post-metrics-report">[Extra] Post metrics</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/respond-to-message">[Extra] Respond to inquiry</SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/welcome">
+              [Extra] Welcome email
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/one-time-password">
+              [Extra] One-time passcode (OTP)
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/reset-password">
+              [Extra] Reset password
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/order-ecomerce">
+              [Extra] E-commerce receipt
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/subscription-receipt">
+              [Extra] Subscription receipt
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/reservation-reminder">
+              [Extra] Reservation reminder
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/post-metrics-report">
+              [Extra] Post metrics
+            </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/respond-to-message">
+              [Extra] Respond to inquiry
+            </SidebarButton>
           </Stack>
 
           <Divider />
