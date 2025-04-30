@@ -1,158 +1,158 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Box,
-  Button,
-  Divider,
-  Drawer,
   Stack,
+  SxProps,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material';
-
 import {
-  useSamplesDrawerOpen,
-  useLoadedEmailTitle,
+  MonitorOutlined,
+  PhoneIphoneOutlined,
+} from '@mui/icons-material';
+import { Reader } from '@usewaypoint/email-builder';
+
+import EditorBlock from '../../documents/editor/EditorBlock';
+import {
+  setSelectedScreenSize,
+  useDocument,
+  useSelectedMainTab,
+  useSelectedScreenSize,
+  useLoadedEmail,
 } from '../../documents/editor/EditorContext';
 
-import SidebarButton from './SidebarButton';
-import logo from './waypoint.svg';
+import ToggleInspectorPanelButton from '../InspectorDrawer/ToggleInspectorPanelButton';
+import ToggleSamplesPanelButton from '../SamplesDrawer/ToggleSamplesPanelButton';
+import DownloadJson from './DownloadJson';
+import HtmlPanel from './HtmlPanel';
+import ImportJson from './ImportJson';
+import JsonPanel from './JsonPanel';
+import MainTabsGroup from './MainTabsGroup';
+import ShareButton from './ShareButton';
+import ShortenButton from './ShortenButton';
+import SaveButton from './SaveButton';
+import SendButton from './SendButton';
 
-export const SAMPLES_DRAWER_WIDTH = 240;
+export default function TemplatePanel() {
+  const document = useDocument();
+  const selectedMainTab = useSelectedMainTab();
+  const selectedScreenSize = useSelectedScreenSize();
+  const loadedEmail = useLoadedEmail();
 
-export default function SamplesDrawer() {
-  const samplesDrawerOpen = useSamplesDrawerOpen();
-  const loadedEmailTitle = useLoadedEmailTitle();
-  const [username, setUsername] = useState<string | null>(null);
+  let mainBoxSx: SxProps = {
+    height: '100%',
+  };
+  if (selectedScreenSize === 'mobile') {
+    mainBoxSx = {
+      ...mainBoxSx,
+      margin: '32px auto',
+      width: 370,
+      height: 800,
+      boxShadow:
+        'rgba(33, 36, 67, 0.04) 0px 10px 20px, rgba(33, 36, 67, 0.04) 0px 2px 6px, rgba(33, 36, 67, 0.04) 0px 0px 1px',
+    };
+  }
 
-  useEffect(() => {
-    fetch('/api/user.php')
-      .then((res) => res.json())
-      .then((data) => {
-        setUsername(data.username || 'Guest');
-      })
-      .catch(() => {
-        setUsername('Guest');
-      });
-  }, []);
+  const handleScreenSizeChange = (_: unknown, value: unknown) => {
+    switch (value) {
+      case 'mobile':
+      case 'desktop':
+        setSelectedScreenSize(value);
+        return;
+      default:
+        setSelectedScreenSize('desktop');
+    }
+  };
 
-  const handleSendEmailClick = () => {
-    const subject = encodeURIComponent('Email Builder Help Needed');
-    const body = encodeURIComponent(
-      `Hi there! I'm more than happy to help with any issue you're having. Please describe your issue below the line and I'll be more than happy to help you out as soon as I can!\n------\n\n`
-    );
-    window.open(
-      `mailto:tech@inspireyouthnj.org?subject=${subject}&body=${body}`,
-      '_blank'
-    );
+  const renderMainPanel = () => {
+    switch (selectedMainTab) {
+      case 'editor':
+        return (
+          <Box sx={mainBoxSx}>
+            <EditorBlock id="root" />
+          </Box>
+        );
+      case 'preview':
+        return (
+          <Box sx={mainBoxSx}>
+            <Reader document={document} rootBlockId="root" />
+          </Box>
+        );
+      case 'html':
+        return <HtmlPanel />;
+      case 'json':
+        return <JsonPanel />;
+    }
   };
 
   return (
-    <Drawer
-      variant="persistent"
-      anchor="left"
-      open={samplesDrawerOpen}
-      sx={{
-        width: samplesDrawerOpen ? SAMPLES_DRAWER_WIDTH : 0,
-      }}
-    >
+    <>
       <Stack
-        spacing={3}
-        py={1}
-        px={2}
-        width={SAMPLES_DRAWER_WIDTH}
+        sx={{
+          height: 49,
+          borderBottom: 1,
+          borderColor: 'divider',
+          backgroundColor: 'white',
+          position: 'sticky',
+          top: 0,
+          zIndex: 'appBar',
+          px: 1,
+        }}
+        direction="row"
         justifyContent="space-between"
-        height="100%"
+        alignItems="center"
       >
+        <ToggleSamplesPanelButton />
         <Stack
-          spacing={2}
-          sx={{
-            '& .MuiButtonBase-root': {
-              width: '100%',
-              justifyContent: 'flex-start',
-            },
-          }}
+          px={2}
+          direction="row"
+          gap={2}
+          width="100%"
+          justifyContent="space-between"
+          alignItems="center"
         >
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            sx={{ pt: 2 }}
-          >
-            <img
-              src="https://static.iynj.org/fullLogo.png"
-              alt="Inspire Youth NJ Logo"
-              style={{ width: '80%', maxWidth: 150, marginBottom: 8 }}
-            />
-          </Box>
-
-          <Box sx={{ minHeight: 24 }}>
-            <Typography variant="h6" component="h1" sx={{ p: 0.75 }}>
-              {loadedEmailTitle
-                ? `Editing: ${loadedEmailTitle}`
-                : username
-                ? `Welcome, ${username}!`
-                : ''}
-            </Typography>
-          </Box>
-
-          <Stack alignItems="flex-start">
-            <SidebarButton href="/email-builder-js#sample/default-template">
-              Default Template
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/welcome">
-              [Extra] Welcome email
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/one-time-password">
-              [Extra] One-time passcode (OTP)
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/reset-password">
-              [Extra] Reset password
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/order-ecomerce">
-              [Extra] E-commerce receipt
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/subscription-receipt">
-              [Extra] Subscription receipt
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/reservation-reminder">
-              [Extra] Reservation reminder
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/post-metrics-report">
-              [Extra] Post metrics
-            </SidebarButton>
-            <SidebarButton href="/email-builder-js#sample/respond-to-message">
-              [Extra] Respond to inquiry
-            </SidebarButton>
+          <Stack direction="row" spacing={2}>
+            <MainTabsGroup />
           </Stack>
-
-          <Divider />
-
-          <Stack>
-            <Button size="small" href="/email-builder-js/myemails.html">
-              My Emails
-            </Button>
+          <Stack direction="row" spacing={2} alignItems="center">
+            {loadedEmail && (
+              <Typography variant="body2" color="text.secondary">
+                Last Updated: {loadedEmail}
+              </Typography>
+            )}
+            <DownloadJson />
+            <ImportJson />
+            <ToggleButtonGroup
+              value={selectedScreenSize}
+              exclusive
+              size="small"
+              onChange={handleScreenSizeChange}
+            >
+              <ToggleButton value="desktop">
+                <Tooltip title="Desktop view">
+                  <MonitorOutlined fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value="mobile">
+                <Tooltip title="Mobile view">
+                  <PhoneIphoneOutlined fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+            <ShareButton />
+            <ShortenButton />
+            <SaveButton />
+            <SendButton />
           </Stack>
         </Stack>
-
-        <Stack spacing={2} px={0.75} py={3}>
-          <Box>
-            <Typography variant="overline" gutterBottom>
-              Need help?
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Contact Gavin at tech@inspireyouthnj.org.
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ justifyContent: 'center' }}
-            onClick={handleSendEmailClick}
-          >
-            Send email for help
-          </Button>
-        </Stack>
+        <ToggleInspectorPanelButton />
       </Stack>
-    </Drawer>
+
+      <Box sx={{ height: 'calc(100vh - 49px)', overflow: 'auto', minWidth: 370 }}>
+        {renderMainPanel()}
+      </Box>
+    </>
   );
 }
