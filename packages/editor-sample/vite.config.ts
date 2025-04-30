@@ -9,7 +9,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        myemails: resolve(__dirname, 'myemails.html'), // <- this is your new entry
+        myemails: resolve(__dirname, 'myemails.html'),
+        templates: resolve(__dirname, 'templates.html'),
       },
     },
   },
