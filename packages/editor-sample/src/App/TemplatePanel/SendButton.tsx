@@ -70,7 +70,7 @@ export default function SendButton() {
 
   return (
     <Tooltip title="Send email">
-      <IconButton onClick={onClick}>
+      <IconButton onClick={onClick} color="primary">
         <SendIcon fontSize="small" />
       </IconButton>
     </Tooltip>
