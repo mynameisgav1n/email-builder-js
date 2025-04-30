@@ -1,7 +1,4 @@
-// TemplatePanel.tsx
 import React from 'react';
-
-import { MonitorOutlined, PhoneIphoneOutlined } from '@mui/icons-material';
 import {
   Box,
   Stack,
@@ -11,20 +8,23 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import {
+  MonitorOutlined,
+  PhoneIphoneOutlined,
+} from '@mui/icons-material';
 import { Reader } from '@usewaypoint/email-builder';
 
 import EditorBlock from '../../documents/editor/EditorBlock';
 import {
   setSelectedScreenSize,
   useDocument,
-  useLoadedEmail,
   useSelectedMainTab,
   useSelectedScreenSize,
+  useLoadedEmail,
 } from '../../documents/editor/EditorContext';
 
 import ToggleInspectorPanelButton from '../InspectorDrawer/ToggleInspectorPanelButton';
 import ToggleSamplesPanelButton from '../SamplesDrawer/ToggleSamplesPanelButton';
-
 import DownloadJson from './DownloadJson';
 import HtmlPanel from './HtmlPanel';
 import ImportJson from './ImportJson';
@@ -38,13 +38,12 @@ import SendButton from './SendButton';
 export default function TemplatePanel() {
   const document = useDocument();
   const selectedMainTab = useSelectedMainTab();
-  const loadedEmail = useLoadedEmail();
   const selectedScreenSize = useSelectedScreenSize();
+  const loadedEmail = useLoadedEmail();
 
   let mainBoxSx: SxProps = {
     height: '100%',
   };
-
   if (selectedScreenSize === 'mobile') {
     mainBoxSx = {
       ...mainBoxSx,
@@ -106,20 +105,23 @@ export default function TemplatePanel() {
         alignItems="center"
       >
         <ToggleSamplesPanelButton />
-        <Stack px={2} direction="row" gap={2} width="100%" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <MainTabsGroup />
-              {loadedEmail && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ ml: 1 }}
-                >
-                  Last Updated: {loadedEmail}
-                </Typography>
-              )}
-            </Stack>
+        <Stack
+          px={2}
+          direction="row"
+          gap={2}
+          width="100%"
+          justifyContent="space-between"
+          alignItems="center"
+        >
           <Stack direction="row" spacing={2}>
+            <MainTabsGroup />
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="center">
+            {loadedEmail && (
+              <Typography variant="body2" color="text.secondary">
+                Last Updated: {loadedEmail}
+              </Typography>
+            )}
             <DownloadJson />
             <ImportJson />
             <ToggleButtonGroup
@@ -147,6 +149,7 @@ export default function TemplatePanel() {
         </Stack>
         <ToggleInspectorPanelButton />
       </Stack>
+
       <Box sx={{ height: 'calc(100vh - 49px)', overflow: 'auto', minWidth: 370 }}>
         {renderMainPanel()}
       </Box>
