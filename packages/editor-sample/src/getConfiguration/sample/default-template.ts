@@ -12,6 +12,7 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       childrenIds: [
         'block_1709571212684',
         'block_1709571234315',
+        'block-1746065375614',
         'block_1731012642335',
       ],
     },
@@ -52,7 +53,15 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       },
       props: {
         markdown: true,
-        text: 'Hey {{1.name}}! 👋',
+        text: 'Hey {{1.name}}! 👋\n\nThis is an email template. Feel free to edit it!\n\nBest regards,\nThe Team @ Inspire Youth NJ',
+      },
+    },
+  },
+  'block-1746065375614': {
+    type: 'Spacer',
+    data: {
+      props: {
+        height: 16,
       },
     },
   },
