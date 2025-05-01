@@ -59,6 +59,8 @@ This is an **important** email template. Feel free to edit it!
 
 Important emails are to be used only when every single member should receive the message, no matter their notification preferences.
 
+Members are **unable** to unsubscribe from important emails, so please only use this email type if necessary.
+
 Best regards,  
 The Team @ Inspire Youth NJ`,
       },
