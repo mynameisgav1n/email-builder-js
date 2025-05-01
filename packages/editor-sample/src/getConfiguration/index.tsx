@@ -8,6 +8,7 @@ import RESPOND_TO_MESSAGE from './sample/respond-to-message';
 import SUBSCRIPTION_RECEIPT from './sample/subscription-receipt';
 import WELCOME from './sample/welcome';
 import DEFAULT_TEMPLATE from './sample/default-template';
+import IMPORTANT_TEMPLATE from './sample/important-template';
 
 export default function getConfiguration(template: string) {
   if (template.startsWith('#sample/')) {
@@ -31,6 +32,8 @@ export default function getConfiguration(template: string) {
         return SUBSCRIPTION_RECEIPT;
       case 'default-template':
         return DEFAULT_TEMPLATE;
+      case 'important-template':
+        return IMPORTANT_TEMPLATE;
     }
   }
 
