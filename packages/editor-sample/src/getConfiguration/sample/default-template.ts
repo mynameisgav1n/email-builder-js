@@ -53,7 +53,7 @@ const DEFAULT_TEMPLATE: TEditorConfiguration = {
       },
       props: {
         markdown: true,
-        text: 'Hey {{1.name}}! 👋\n\nThis is an email template. Feel free to edit it!\n\nBest regards,\nThe Team @ Inspire Youth NJ',
+        text: 'Hey [[NAME]]! 👋\n\nThis is an email template. Feel free to edit it!\n\nBest regards,\nThe Team @ Inspire Youth NJ',
       },
     },
   },
