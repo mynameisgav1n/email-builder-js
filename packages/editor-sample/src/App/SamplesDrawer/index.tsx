@@ -101,6 +101,9 @@ export default function SamplesDrawer() {
             <SidebarButton href="/email-builder-js#sample/default-template">
               Default Template
             </SidebarButton>
+            <SidebarButton href="/email-builder-js#sample/important-template">
+              Important Email Template
+            </SidebarButton>
             <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
           </Stack>
             <Divider />
