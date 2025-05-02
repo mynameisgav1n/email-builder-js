@@ -1,3 +1,6 @@
+console.log("FileManager component loaded");
+return <h1 style={{ padding: 100 }}>Hello from FileManager</h1>;
+
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Snackbar, TextField, IconButton,
@@ -17,7 +20,6 @@ interface FileItem {
 }
 
 export default function FileManager() {
-  return <h1 style={{ padding: 100 }}>Hello from FileManager</h1>;
   const [items, setItems] = useState<FileItem[]>([]);
   const [path, setPath] = useState('');
   const [file, setFile] = useState<File | null>(null);
