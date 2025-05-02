@@ -1,39 +1,35 @@
 import React, { useState } from 'react';
-import { Button, Snackbar } from '@mui/material';
+import { Button, Snackbar, Typography, Stack } from '@mui/material';
 
-export default function Trigger401Button() {
+export default function LogoutButton() {
   const [open, setOpen] = useState(false);
-  const [statusCode, setStatusCode] = useState<number | null>(null);
 
-  const handleClick = async () => {
-    try {
-      const response = await fetch('/api/protected-test.php', {
-        method: 'GET',
-      });
-
-      setStatusCode(response.status);
-
-      if (response.status === 401) {
-        setOpen(true);
-      } else {
-        alert(`Unexpected status: ${response.status}`);
-      }
-    } catch (error) {
-      alert('Request failed: ' + error);
-    }
+  const handleLogout = () => {
+    // Make a fetch request with fake credentials to overwrite saved ones
+    fetch('/api/protected-test.php', {
+      method: 'GET',
+      headers: {
+        Authorization: 'Basic ' + btoa('logout:logout'), // invalid credentials
+      },
+    }).finally(() => {
+      setOpen(true);
+    });
   };
 
   return (
-    <>
-      <Button variant="contained" color="error" onClick={handleClick}>
-        Trigger 401 Unauthorized
+    <Stack spacing={1} alignItems="flex-start">
+      <Button variant="contained" color="error" onClick={handleLogout}>
+        Log Out
       </Button>
+      <Typography variant="body2" color="text.secondary">
+        Logging out will prompt for login again the next time you access a protected page.
+      </Typography>
       <Snackbar
         open={open}
         autoHideDuration={3000}
         onClose={() => setOpen(false)}
-        message="401 Unauthorized triggered"
+        message="You have been logged out"
       />
-    </>
+    </Stack>
   );
 }
