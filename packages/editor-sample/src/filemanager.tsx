@@ -228,7 +228,9 @@ function FileExplorerPage() {
       </Typography>
       {/* Upload & New Folder */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-        <Typography variant="h6">/ {path}</Typography>
+        <Typography variant="h6">
+          https://emailbuilder.iynj.org/publicfiles{path ? '/' + path : ''}
+        </Typography>
         <Button
           component="label"
           variant="contained"
