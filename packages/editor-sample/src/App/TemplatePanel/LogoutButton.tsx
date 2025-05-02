@@ -26,7 +26,7 @@ export default function Trigger401Button() {
   return (
     <>
       <Button variant="contained" color="error" onClick={handleClick}>
-        Trigger 401 Unauthorized
+        Logout
       </Button>
       <Snackbar
         open={open}
