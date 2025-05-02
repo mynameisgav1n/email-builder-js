@@ -1,35 +1,65 @@
 import React, { useState } from 'react';
-import { Button, Snackbar, Typography, Stack } from '@mui/material';
+import {
+  ListItem,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Snackbar,
+  Typography
+} from '@mui/material';
 
-export default function LogoutButton() {
-  const [open, setOpen] = useState(false);
+export default function LogoutLink() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const handleLogout = () => {
-    // Make a fetch request with fake credentials to overwrite saved ones
-    fetch('/api/protected-test.php', {
+  const triggerLogout = async () => {
+    // Overwrite saved credentials with bogus ones
+    await fetch('/api/protected-test.php', {
       method: 'GET',
       headers: {
-        Authorization: 'Basic ' + btoa('logout:logout'), // invalid credentials
+        Authorization: 'Basic ' + btoa('logout:logout'),
       },
-    }).finally(() => {
-      setOpen(true);
     });
+    setSnackbarOpen(true);
+  };
+
+  const handleLogoutClick = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = () => {
+    setConfirmOpen(false);
+    triggerLogout();
   };
 
   return (
-    <Stack spacing={1} alignItems="flex-start">
-      <Button variant="contained" color="error" onClick={handleLogout}>
-        Log Out
-      </Button>
-      <Typography variant="body2" color="text.secondary">
-        Logging out will prompt for login again the next time you access a protected page.
-      </Typography>
+    <>
+      <ListItem button onClick={handleLogoutClick}>
+        <ListItemText primary="Log Out" />
+      </ListItem>
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Logout</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to log out?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirm} color="error" variant="contained">
+            Log Out
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
-        open={open}
-        autoHideDuration={3000}
-        onClose={() => setOpen(false)}
-        message="You have been logged out"
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setSnackbarOpen(false)}
+        message="You've been logged out!"
       />
-    </Stack>
+    </>
   );
 }
