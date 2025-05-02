@@ -11,6 +11,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         myemails: resolve(__dirname, 'myemails.html'),
         templates: resolve(__dirname, 'templates.html'),
+        filemanager: resolve(__dirname, 'filemanager.html'),
       },
     },
   },
