@@ -149,6 +149,9 @@ export default function SamplesDrawer() {
             <Button size="small" href="/email-builder-js/myemails.html">
               My Emails
             </Button>
+            <Button size="small" href="/email-builder-js/filemanager.html">
+              File Manager
+            </Button>
           </Stack>
         </Stack>
 
