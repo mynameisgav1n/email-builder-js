@@ -1,14 +1,48 @@
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import {
-  Box, Typography, Button, Snackbar, TextField, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Card, CardContent, Stack, CircularProgress, Tooltip
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  CircularProgress,
+  CssBaseline,
+  ThemeProvider,
+  useTheme,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
-  Delete, Edit, FileCopy, Folder, InsertDriveFile, Image
+  Delete,
+  Edit,
+  FileCopy,
+  Folder,
+  InsertDriveFile,
+  Image as ImageIcon
 } from '@mui/icons-material';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
+
+import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
+import SamplesDrawer from './App/SamplesDrawer';
+import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
+import theme from './theme';
+
+function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
+  const { transitions } = useTheme();
+  return transitions.create(cssProp, {
+    easing: !open ? transitions.easing.sharp : transitions.easing.easeOut,
+    duration: !open ? transitions.duration.leavingScreen : transitions.duration.enteringScreen,
+  });
+}
 
 interface FileItem {
   name: string;
@@ -18,7 +52,7 @@ interface FileItem {
   creation_date?: string;
 }
 
-const FileManager = () => {
+function FileManagerPage() {
   const [items, setItems] = useState<FileItem[]>([]);
   const [path, setPath] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -110,8 +144,10 @@ const FileManager = () => {
   };
 
   return (
-    <Box p={4}>
-      <Typography variant="h4" gutterBottom>Public File Manager</Typography>
+    <Box sx={{ padding: 3 }}>
+      <Typography variant="h5" fontWeight={600} mb={2}>
+        Public File Manager
+      </Typography>
 
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <TextField
@@ -122,10 +158,14 @@ const FileManager = () => {
         />
         <Button onClick={createFolder} variant="outlined">Create Folder</Button>
         <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-        <Button onClick={upload} variant="contained" disabled={!file || !username}>Upload Image</Button>
+        <Button onClick={upload} variant="contained" disabled={!file || !username}>
+          Upload Image
+        </Button>
       </Stack>
 
-      {loading ? <CircularProgress /> : (
+      {loading ? (
+        <CircularProgress />
+      ) : (
         <Stack spacing={2}>
           {items.map(item => (
             <Card key={item.name} variant="outlined">
@@ -133,7 +173,9 @@ const FileManager = () => {
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Stack direction="row" spacing={2} alignItems="center">
                     {item.type === 'folder' ? <Folder /> : (
-                      item.url?.match(/\.(jpe?g|png|gif|webp)$/i) ? <Image /> : <InsertDriveFile />
+                      item.url?.match(/\.(jpe?g|png|gif|webp)$/i)
+                        ? <ImageIcon />
+                        : <InsertDriveFile />
                     )}
                     <Typography
                       variant="body1"
@@ -168,14 +210,17 @@ const FileManager = () => {
         </Stack>
       )}
 
-      <Dialog open={!!renameTarget} onClose={() => setRenameTarget(null)}>
+      <Dialog open={!!renameTarget} onClose={() => setRenameTarget(null)} fullWidth>
         <DialogTitle>Rename "{renameTarget}"</DialogTitle>
         <DialogContent>
           <TextField
-            label="New name"
+            autoFocus
             fullWidth
+            label="New Name"
             value={renameNew}
             onChange={(e) => setRenameNew(e.target.value)}
+            variant="outlined"
+            size="small"
           />
         </DialogContent>
         <DialogActions>
@@ -197,9 +242,37 @@ const FileManager = () => {
         autoHideDuration={3000}
         onClose={() => setMessage(null)}
         message={message}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       />
     </Box>
   );
-};
+}
 
-export default FileManager;
+function LayoutWrapper() {
+  const samplesOpen = useSamplesDrawerOpen();
+  const mlTransition = useDrawerTransition('margin-left', samplesOpen);
+
+  return (
+    <>
+      <SamplesDrawer />
+      <Stack
+        sx={{
+          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
+          transition: mlTransition,
+        }}
+      >
+        <FileManagerPage />
+      </Stack>
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+root.render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <LayoutWrapper />
+    </ThemeProvider>
+  </React.StrictMode>
+);
