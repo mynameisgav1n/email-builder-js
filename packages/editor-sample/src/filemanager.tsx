@@ -64,6 +64,7 @@ function FileManagerPage() {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState<string>('');
 
+  // fetch current user
   useEffect(() => {
     fetch('/api/user.php')
       .then(res => res.json())
@@ -71,9 +72,10 @@ function FileManagerPage() {
       .catch(() => setUsername(''));
   }, []);
 
+  // list files/folders
   const fetchFiles = async () => {
     setLoading(true);
-    const res = await fetch(`/filemanager.php?action=list&path=${encodeURIComponent(path)}`);
+    const res = await fetch(`/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`);
     const data = await res.json();
     setItems(data.items || []);
     setLoading(false);
@@ -83,13 +85,14 @@ function FileManagerPage() {
     fetchFiles();
   }, [path]);
 
+  // upload
   const upload = async () => {
     if (!file || !username) return;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('username', username);
 
-    const res = await fetch(`/filemanager.php?action=upload&path=${encodeURIComponent(path)}`, {
+    const res = await fetch(`/api/filemanager.php?action=upload&path=${encodeURIComponent(path)}`, {
       method: 'POST',
       body: formData,
     });
@@ -99,9 +102,10 @@ function FileManagerPage() {
     fetchFiles();
   };
 
+  // delete
   const deleteItem = async (name: string) => {
     if (!window.confirm(`Delete ${name}?`)) return;
-    const res = await fetch(`/filemanager.php?action=delete`, {
+    const res = await fetch(`/api/filemanager.php?action=delete`, {
       method: 'POST',
       body: new URLSearchParams({ name: `${path}/${name}` }),
     });
@@ -110,9 +114,10 @@ function FileManagerPage() {
     fetchFiles();
   };
 
+  // rename
   const renameItem = async () => {
     if (!renameTarget || !renameNew) return;
-    const res = await fetch(`/filemanager.php?action=rename`, {
+    const res = await fetch(`/api/filemanager.php?action=rename`, {
       method: 'POST',
       body: new URLSearchParams({
         old: `${path}/${renameTarget}`,
@@ -126,9 +131,10 @@ function FileManagerPage() {
     fetchFiles();
   };
 
+  // mkdir
   const createFolder = async () => {
     if (!folderName) return;
-    const res = await fetch(`/filemanager.php?action=mkdir`, {
+    const res = await fetch(`/api/filemanager.php?action=mkdir`, {
       method: 'POST',
       body: new URLSearchParams({ path, name: folderName }),
     });
@@ -138,6 +144,7 @@ function FileManagerPage() {
     fetchFiles();
   };
 
+  // copy link
   const copyLink = (url: string) => {
     navigator.clipboard.writeText(`${location.origin}${url}`);
     setMessage('Link copied!');
@@ -180,7 +187,10 @@ function FileManagerPage() {
                     <Typography
                       variant="body1"
                       sx={{ cursor: item.type === 'file' && item.url ? 'pointer' : 'default' }}
-                      onClick={() => item.url && item.url.match(/\.(jpe?g|png|gif|webp)$/i) && setLightboxUrl(item.url)}
+                      onClick={() =>
+                        item.url?.match(/\.(jpe?g|png|gif|webp)$/i) &&
+                        setLightboxUrl(item.url)
+                      }
                     >
                       {item.name}
                     </Typography>
@@ -188,19 +198,29 @@ function FileManagerPage() {
                   <Stack direction="row" spacing={1} alignItems="center">
                     {item.username && (
                       <Typography variant="caption" sx={{ color: '#555' }}>
-                        uploaded by {item.username} on {new Date(item.creation_date!).toLocaleString()}
+                        uploaded by {item.username} on{' '}
+                        {new Date(item.creation_date!).toLocaleString()}
                       </Typography>
                     )}
                     {item.url && (
                       <Tooltip title="Copy link">
-                        <IconButton onClick={() => copyLink(item.url)}><FileCopy /></IconButton>
+                        <IconButton onClick={() => copyLink(item.url)}>
+                          <FileCopy />
+                        </IconButton>
                       </Tooltip>
                     )}
                     <Tooltip title="Rename">
-                      <IconButton onClick={() => { setRenameTarget(item.name); setRenameNew(item.name); }}><Edit /></IconButton>
+                      <IconButton onClick={() => {
+                        setRenameTarget(item.name);
+                        setRenameNew(item.name);
+                      }}>
+                        <Edit />
+                      </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete">
-                      <IconButton onClick={() => deleteItem(item.name)}><Delete /></IconButton>
+                      <IconButton onClick={() => deleteItem(item.name)}>
+                        <Delete />
+                      </IconButton>
                     </Tooltip>
                   </Stack>
                 </Stack>
