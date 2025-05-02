@@ -8,14 +8,22 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Snackbar,
   List,
   ListItem,
   ListItemText,
+  Box,
 } from '@mui/material';
 import {
   VerticalAlignBottomOutlined,
   VerticalAlignCenterOutlined,
   VerticalAlignTopOutlined,
+  ArrowUpward as UpIcon,
+  Folder as FolderIcon,
 } from '@mui/icons-material';
 
 import BaseSidebarPanel from './helpers/BaseSidebarPanel';
@@ -45,11 +53,12 @@ export default function ImageSidebarPanel({
 }: ImageSidebarPanelProps) {
   const [, setErrors] = useState<Zod.ZodError | null>(null);
 
-  // Local state for the picker
+  // picker state
   const [chooserOpen, setChooserOpen] = useState(false);
-  const [available, setAvailable] = useState<FileItem[]>([]);
+  const [dialogPath, setDialogPath] = useState('');
+  const [dialogItems, setDialogItems] = useState<FileItem[]>([]);
 
-  // Validate & commit
+  // Validate & commit updates
   const updateData = (d: unknown) => {
     const res = ImagePropsSchema.safeParse(d);
     if (res.success) {
@@ -60,150 +69,214 @@ export default function ImageSidebarPanel({
     }
   };
 
-  // When dialog opens, fetch the public images
+  // Fetch items whenever dialog opens or path changes
   useEffect(() => {
     if (!chooserOpen) return;
-    fetch('/api/filemanager.php?action=list&path=')
-      .then((res) => res.json())
+    fetch(
+      `/api/filemanager.php?action=list&path=${encodeURIComponent(dialogPath)}`
+    )
+      .then((r) => r.json())
       .then((json) => {
-        if (Array.isArray(json.items)) {
-          setAvailable(
-            json.items.filter(
-              (i: any) =>
-                i.type === 'file' &&
-                /\.(jpe?g|png|gif|webp)$/i.test(i.name)
-            )
-          );
-        }
+        if (Array.isArray(json.items)) setDialogItems(json.items);
       })
       .catch(console.error);
-  }, [chooserOpen]);
+  }, [chooserOpen, dialogPath]);
 
-  // Set URL and close dialog
+  // Filter out html
+  const dialogFolders = dialogItems.filter((i) => i.type === 'folder');
+  const dialogFiles = dialogItems.filter(
+    (i) => i.type === 'file' && !/\.html?$/i.test(i.name)
+  );
+
+  // choose file URL
   const chooseUrl = (item: FileItem) => {
     const full = `${window.location.origin}${item.url}`;
-    updateData({
-      ...data,
-      props: { ...data.props, url: full },
-    });
+    updateData({ ...data, props: { ...data.props, url: full } });
     setChooserOpen(false);
   };
 
   return (
-    <BaseSidebarPanel title="Image block">
-      {/* Source URL + Choose */}
-      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+    <>
+      <BaseSidebarPanel title="Image block">
+        {/* Source URL + Choose */}
+        <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+          <TextInput
+            label="Source URL"
+            defaultValue={data.props?.url ?? ''}
+            onChange={(v) => {
+              const url = v.trim() || null;
+              updateData({ ...data, props: { ...data.props, url } });
+            }}
+            fullWidth
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              setDialogPath('');
+              setChooserOpen(true);
+            }}
+          >
+            Choose Image
+          </Button>
+        </Stack>
+
+        {/* Other fields */}
         <TextInput
-          label="Source URL"
-          defaultValue={data.props?.url ?? ''}
+          label="Alt text"
+          defaultValue={data.props?.alt ?? ''}
+          onChange={(alt) => updateData({ ...data, props: { ...data.props, alt } })}
+        />
+        <TextInput
+          label="Click through URL"
+          defaultValue={data.props?.linkHref ?? ''}
           onChange={(v) => {
-            const url = v.trim().length ? v.trim() : null;
-            updateData({ ...data, props: { ...data.props, url } });
+            const linkHref = v.trim() || null;
+            updateData({ ...data, props: { ...data.props, linkHref } });
           }}
-          fullWidth
         />
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => setChooserOpen(true)}
+        <Stack direction="row" spacing={2} my={2}>
+          <TextDimensionInput
+            label="Width"
+            defaultValue={data.props?.width}
+            onChange={(width) =>
+              updateData({ ...data, props: { ...data.props, width } })
+            }
+          />
+          <TextDimensionInput
+            label="Height"
+            defaultValue={data.props?.height}
+            onChange={(height) =>
+              updateData({ ...data, props: { ...data.props, height } })
+            }
+          />
+        </Stack>
+        <RadioGroupInput
+          label="Alignment"
+          defaultValue={data.props?.contentAlignment ?? 'middle'}
+          onChange={(contentAlignment) =>
+            updateData({
+              ...data,
+              props: { ...data.props, contentAlignment },
+            })
+          }
         >
-          Choose Image
-        </Button>
-      </Stack>
-
-      {/* Other fields */}
-      <TextInput
-        label="Alt text"
-        defaultValue={data.props?.alt ?? ''}
-        onChange={(alt) => updateData({ ...data, props: { ...data.props, alt } })}
-      />
-      <TextInput
-        label="Click through URL"
-        defaultValue={data.props?.linkHref ?? ''}
-        onChange={(v) => {
-          const linkHref = v.trim().length ? v.trim() : null;
-          updateData({ ...data, props: { ...data.props, linkHref } });
-        }}
-      />
-
-      <Stack direction="row" spacing={2} my={2}>
-        <TextDimensionInput
-          label="Width"
-          defaultValue={data.props?.width}
-          onChange={(width) =>
-            updateData({ ...data, props: { ...data.props, width } })
-          }
+          <ToggleButton value="top">
+            <VerticalAlignTopOutlined fontSize="small" />
+          </ToggleButton>
+          <ToggleButton value="middle">
+            <VerticalAlignCenterOutlined fontSize="small" />
+          </ToggleButton>
+          <ToggleButton value="bottom">
+            <VerticalAlignBottomOutlined fontSize="small" />
+          </ToggleButton>
+        </RadioGroupInput>
+        <MultiStylePropertyPanel
+          names={['backgroundColor', 'textAlign', 'padding']}
+          value={data.style}
+          onChange={(style) => updateData({ ...data, style })}
         />
-        <TextDimensionInput
-          label="Height"
-          defaultValue={data.props?.height}
-          onChange={(height) =>
-            updateData({ ...data, props: { ...data.props, height } })
-          }
-        />
-      </Stack>
+      </BaseSidebarPanel>
 
-      <RadioGroupInput
-        label="Alignment"
-        defaultValue={data.props?.contentAlignment ?? 'middle'}
-        onChange={(contentAlignment) =>
-          updateData({
-            ...data,
-            props: { ...data.props, contentAlignment },
-          })
-        }
-      >
-        <ToggleButton value="top">
-          <VerticalAlignTopOutlined fontSize="small" />
-        </ToggleButton>
-        <ToggleButton value="middle">
-          <VerticalAlignCenterOutlined fontSize="small" />
-        </ToggleButton>
-        <ToggleButton value="bottom">
-          <VerticalAlignBottomOutlined fontSize="small" />
-        </ToggleButton>
-      </RadioGroupInput>
-
-      <MultiStylePropertyPanel
-        names={['backgroundColor', 'textAlign', 'padding']}
-        value={data.style}
-        onChange={(style) => updateData({ ...data, style })}
-      />
-
-      {/* —— Image Chooser Dialog —— */}
+      {/* Explorer Dialog */}
       <Dialog
         open={chooserOpen}
         onClose={() => setChooserOpen(false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
       >
-        <DialogTitle>Select an image</DialogTitle>
+        <DialogTitle>Select Image from Explorer</DialogTitle>
         <DialogContent dividers>
-          <List>
-            {available.map((item) => (
-              <ListItem
-                button
-                key={item.name}
-                onClick={() => chooseUrl(item)}
-              >
-                <ListItemText
-                  primary={item.name}
-                  secondary={
-                    item.username
-                      ? `Uploaded by ${item.username}`
-                      : undefined
-                  }
-                />
-              </ListItem>
-            ))}
-            {!available.length && (
-              <ListItem>
-                <ListItemText primary="No images found." />
-              </ListItem>
+          {/* Folders Grid */}
+          {dialogFolders.length > 0 && (
+            <Typography variant="subtitle1" gutterBottom>
+              Folders
+            </Typography>
+          )}
+          <Grid container spacing={2} mb={4}>
+            {dialogPath && (
+              <Grid item xs={3}>
+                <Card
+                  onClick={() => {
+                    const parts = dialogPath.split('/');
+                    parts.pop();
+                    setDialogPath(parts.join('/'));
+                  }}
+                  sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
+                >
+                  <UpIcon fontSize="large" />
+                  <Typography>Up</Typography>
+                </Card>
+              </Grid>
             )}
-          </List>
+            {dialogFolders.map((f) => (
+              <Grid item xs={3} key={f.name}>
+                <Card
+                  onClick={() =>
+                    setDialogPath(
+                      dialogPath ? `${dialogPath}/${f.name}` : f.name
+                    )
+                  }
+                  sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
+                >
+                  <FolderIcon fontSize="large" />
+                  <Typography noWrap mt={1}>{f.name}</Typography>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Images Grid */}
+          {dialogFiles.length > 0 && (
+            <Typography variant="subtitle1" gutterBottom>
+              Images
+            </Typography>
+          )}
+          <Grid container spacing={2}>
+            {dialogFiles.map((file) => (
+              <Grid item xs={3} key={file.name}>
+                <Card sx={{ cursor: 'pointer' }} onClick={() => chooseUrl(file)}>
+                  <CardContent sx={{ p: 1, textAlign: 'center' }}>
+                    <Box
+                      component="img"
+                      src={file.url}
+                      sx={{
+                        width: '100%',
+                        height: 100,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                      }}
+                    />
+                    <Typography noWrap mt={1}>{file.name}</Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      {file.username} •{' '}
+                      {new Date(file.creation_date!).toLocaleString()}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+            {!dialogFolders.length && !dialogFiles.length && (
+              <Grid item xs={12}>
+                <Typography>No items found.</Typography>
+              </Grid>
+            )}
+          </Grid>
         </DialogContent>
       </Dialog>
-    </BaseSidebarPanel>
+
+      {/* Snackbar for errors */}
+      <Snackbar
+        open={!!(snack.open)}
+        autoHideDuration={3000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        message={snack.msg}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+    </>
   );
 }
