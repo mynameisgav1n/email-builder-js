@@ -55,11 +55,15 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
 }
 
 function FileExplorerPage() {
-  const [path, setPath] = useState<string>('');                 // relative path
+  const [path, setPath] = useState<string>('');
   const [items, setItems] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // upload state
+  // current user
+  const [username, setUsername] = useState<string>('');
+  const [usernameLoading, setUsernameLoading] = useState<boolean>(true);
+
+  // upload
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
 
@@ -67,16 +71,16 @@ function FileExplorerPage() {
   const [confirmDelete, setConfirmDelete] = useState<FileItem | null>(null);
 
   // rename
-  const [renameItem, setRenameItem]     = useState<FileItem | null>(null);
-  const [renameValue, setRenameValue]   = useState<string>('');
+  const [renameItem, setRenameItem] = useState<FileItem | null>(null);
+  const [renameValue, setRenameValue] = useState<string>('');
 
   // new folder
   const [newFolderDialog, setNewFolderDialog] = useState<boolean>(false);
-  const [newFolderName, setNewFolderName]     = useState<string>('');
+  const [newFolderName, setNewFolderName] = useState<string>('');
 
   // lightbox
   const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
-  const [lightboxUrl, setLightboxUrl]   = useState<string>('');
+  const [lightboxUrl, setLightboxUrl] = useState<string>('');
 
   // snackbar
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({
@@ -84,8 +88,24 @@ function FileExplorerPage() {
     msg: '',
   });
 
-  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
-  // Fetch list, now surfaces real errors
+  // fetch current username
+  useEffect(() => {
+    fetch('/api/user.php', { headers: { Accept: 'application/json' } })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(json => {
+        setUsername(json.username ?? '');
+      })
+      .catch(err => {
+        console.error('User fetch error:', err);
+        setSnack({ open: true, msg: 'Failed to load user' });
+      })
+      .finally(() => setUsernameLoading(false));
+  }, []);
+
+  // fetch file list
   const fetchList = async () => {
     setLoading(true);
     try {
@@ -105,26 +125,22 @@ function FileExplorerPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-    fetchList();
-  }, [path]);
+    if (!usernameLoading) fetchList();
+  }, [path, usernameLoading]);
 
-  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
-  // Upload handler
+  // upload handler
   const doUpload = async () => {
-    if (!fileToUpload) return;
+    if (!fileToUpload || !username) return;
     setUploading(true);
-
     const fd = new FormData();
     fd.append('action', 'upload');
     fd.append('path', path);
-    fd.append('username', '<?= $usernameFromSession ?>'); // adjust as needed
+    fd.append('username', username);
     fd.append('file', fileToUpload);
-
     try {
       const res = await fetch('/api/filemanager.php', { method: 'POST', body: fd });
-      const j   = await res.json();
+      const j = await res.json();
       if (!j.success) throw new Error(j.error || 'Upload failed');
       setSnack({ open: true, msg: 'Uploaded!' });
       setFileToUpload(null);
@@ -137,8 +153,7 @@ function FileExplorerPage() {
     }
   };
 
-  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
-  // Delete handler
+  // delete handler
   const doDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -161,8 +176,7 @@ function FileExplorerPage() {
     }
   };
 
-  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
-  // Rename handler
+  // rename handler
   const doRename = async () => {
     if (!renameItem) return;
     try {
@@ -186,8 +200,7 @@ function FileExplorerPage() {
     }
   };
 
-  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
-  // New folder handler
+  // create folder handler
   const doCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     try {
@@ -207,33 +220,26 @@ function FileExplorerPage() {
       setNewFolderName('');
       fetchList();
     } catch (err: any) {
-      console.error('Mkdir error:', err);
+      console.error('MkDir error:', err);
       setSnack({ open: true, msg: err.message });
     }
   };
 
-  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
   return (
     <Box sx={{ p: 3 }}>
-      {/* Upload + New Folder Row */}
+      {/* Upload & New Folder */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <Typography variant="h6">/ {path}</Typography>
 
-        {/* MUI Button as file input */}
-        <Button
-          variant="contained"
-          component="label"
-          startIcon={<UploadIcon />}
-        >
+        <Button component="label" variant="contained" startIcon={<UploadIcon />}>
           Choose File
           <input
             hidden
             type="file"
             accept="image/*"
-            onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)}
+            onChange={e => setFileToUpload(e.target.files?.[0] ?? null)}
           />
         </Button>
-
         <Button
           variant="contained"
           disabled={!fileToUpload || uploading}
@@ -251,7 +257,7 @@ function FileExplorerPage() {
         </Button>
       </Stack>
 
-      {/* Grid of folders & images */}
+      {/* Grid */}
       {loading ? (
         <CircularProgress />
       ) : (
@@ -259,9 +265,7 @@ function FileExplorerPage() {
           {path && (
             <Grid item xs={3}>
               <Card
-                onClick={() =>
-                  setPath(path.split('/').slice(0, -1).join('/'))
-                }
+                onClick={() => setPath(path.split('/').slice(0, -1).join('/'))}
                 sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
               >
                 <UpIcon fontSize="large" />
@@ -270,10 +274,9 @@ function FileExplorerPage() {
             </Grid>
           )}
 
-          {items.map((it) => (
+          {items.map(it => (
             <Grid item xs={3} key={it.name}>
               <Card sx={{ position: 'relative', p: 1 }}>
-                {/* Rename */}
                 <IconButton
                   size="small"
                   sx={{ position: 'absolute', top: 4, left: 4 }}
@@ -284,7 +287,6 @@ function FileExplorerPage() {
                 >
                   <EditIcon fontSize="small" />
                 </IconButton>
-                {/* Delete */}
                 <IconButton
                   size="small"
                   sx={{ position: 'absolute', top: 4, right: 4 }}
@@ -294,6 +296,7 @@ function FileExplorerPage() {
                 </IconButton>
 
                 <CardContent
+                  sx={{ cursor: 'pointer', textAlign: 'center', pt: 2 }}
                   onClick={() => {
                     if (it.type === 'folder') {
                       setPath(path ? `${path}/${it.name}` : it.name);
@@ -302,7 +305,6 @@ function FileExplorerPage() {
                       setLightboxOpen(true);
                     }
                   }}
-                  sx={{ cursor: 'pointer', textAlign: 'center', pt: 2 }}
                 >
                   {it.type === 'folder' ? (
                     <FolderIcon fontSize="large" />
@@ -318,19 +320,10 @@ function FileExplorerPage() {
                       }}
                     />
                   )}
-
-                  <Typography noWrap mt={1}>
-                    {it.name}
-                  </Typography>
-
+                  <Typography noWrap mt={1}>{it.name}</Typography>
                   {it.type === 'file' && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                    >
-                      {it.username} •{' '}
-                      {new Date(it.creation_date!).toLocaleString()}
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {it.username} • {new Date(it.creation_date!).toLocaleString()}
                     </Typography>
                   )}
                 </CardContent>
@@ -341,12 +334,7 @@ function FileExplorerPage() {
       )}
 
       {/* Delete Dialog */}
-      <Dialog
-        open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)} fullWidth maxWidth="xs">
         <DialogTitle>Delete “{confirmDelete?.name}”?</DialogTitle>
         <DialogActions>
           <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
@@ -357,12 +345,7 @@ function FileExplorerPage() {
       </Dialog>
 
       {/* Rename Dialog */}
-      <Dialog
-        open={!!renameItem}
-        onClose={() => setRenameItem(null)}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={!!renameItem} onClose={() => setRenameItem(null)} fullWidth maxWidth="xs">
         <DialogTitle>Rename “{renameItem?.name}”</DialogTitle>
         <DialogContent>
           <TextField
@@ -371,27 +354,19 @@ function FileExplorerPage() {
             size="small"
             label="New Name"
             value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
+            onChange={e => setRenameValue(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRenameItem(null)}>Cancel</Button>
-          <Button
-            disabled={!renameValue.trim() || renameValue === renameItem?.name}
-            onClick={doRename}
-          >
+          <Button disabled={!renameValue.trim() || renameValue === renameItem?.name} onClick={doRename}>
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* New Folder Dialog */}
-      <Dialog
-        open={newFolderDialog}
-        onClose={() => setNewFolderDialog(false)}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={newFolderDialog} onClose={() => setNewFolderDialog(false)} fullWidth maxWidth="xs">
         <DialogTitle>New Folder</DialogTitle>
         <DialogContent>
           <TextField
@@ -400,7 +375,7 @@ function FileExplorerPage() {
             size="small"
             label="Folder Name"
             value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
+            onChange={e => setNewFolderName(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
@@ -412,16 +387,17 @@ function FileExplorerPage() {
       </Dialog>
 
       {/* Image Lightbox */}
-      <Dialog
-        open={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-        fullWidth
-        maxWidth="lg"
-      >
+      <Dialog open={lightboxOpen} onClose={() => setLightboxOpen(false)} fullWidth maxWidth="lg">
         <Box
           component="img"
           src={lightboxUrl}
-          sx={{ width: '100%', height: 'auto' }}
+          sx={{
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            objectFit: 'contain',
+            display: 'block',
+            m: 'auto',
+          }}
         />
       </Dialog>
 
@@ -429,7 +405,7 @@ function FileExplorerPage() {
       <Snackbar
         open={snack.open}
         autoHideDuration={3000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
         message={snack.msg}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
