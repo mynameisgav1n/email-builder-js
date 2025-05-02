@@ -15,6 +15,7 @@ import {
 
 import SidebarButton from './SidebarButton';
 import logo from './waypoint.svg';
+import LogoutButton from './LogoutButton';
 
 export const SAMPLES_DRAWER_WIDTH = 240;
 
@@ -152,6 +153,7 @@ export default function SamplesDrawer() {
             <Button size="small" href="/email-builder-js/filemanager.html">
               File Manager
             </Button>
+            <LogoutButton />
           </Stack>
         </Stack>
 
