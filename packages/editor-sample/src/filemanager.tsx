@@ -28,6 +28,7 @@ import {
   ArrowUpward as UpIcon,
   Folder as FolderIcon,
   Add as AddIcon,
+  Image as ImageIcon,
 } from '@mui/icons-material';
 
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
@@ -54,11 +55,11 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
 }
 
 function FileExplorerPage() {
-  const [path, setPath] = useState<string>(''); // relative path
+  const [path, setPath] = useState<string>('');                 // relative path
   const [items, setItems] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // upload
+  // upload state
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
 
@@ -66,16 +67,16 @@ function FileExplorerPage() {
   const [confirmDelete, setConfirmDelete] = useState<FileItem | null>(null);
 
   // rename
-  const [renameItem, setRenameItem] = useState<FileItem | null>(null);
-  const [renameValue, setRenameValue] = useState<string>('');
+  const [renameItem, setRenameItem]     = useState<FileItem | null>(null);
+  const [renameValue, setRenameValue]   = useState<string>('');
 
   // new folder
   const [newFolderDialog, setNewFolderDialog] = useState<boolean>(false);
-  const [newFolderName, setNewFolderName] = useState<string>('');
+  const [newFolderName, setNewFolderName]     = useState<string>('');
 
   // lightbox
   const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string>('');
+  const [lightboxUrl, setLightboxUrl]   = useState<string>('');
 
   // snackbar
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({
@@ -83,21 +84,23 @@ function FileExplorerPage() {
     msg: '',
   });
 
-  // fetch directory listing
+  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
+  // Fetch list, now surfaces real errors
   const fetchList = async () => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`
+        `/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`,
+        { headers: { Accept: 'application/json' } }
       );
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
       const json = await res.json();
-      if (!json.error && Array.isArray(json.items)) {
-        setItems(json.items);
-      } else {
-        setSnack({ open: true, msg: json.error || 'List failed' });
-      }
-    } catch {
-      setSnack({ open: true, msg: 'Could not fetch files' });
+      if (json.error) throw new Error(json.error);
+      if (!Array.isArray(json.items)) throw new Error('Malformed response');
+      setItems(json.items);
+    } catch (err: any) {
+      console.error('List error:', err);
+      setSnack({ open: true, msg: err.message });
     } finally {
       setLoading(false);
     }
@@ -107,7 +110,8 @@ function FileExplorerPage() {
     fetchList();
   }, [path]);
 
-  // upload handler
+  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
+  // Upload handler
   const doUpload = async () => {
     if (!fileToUpload) return;
     setUploading(true);
@@ -119,26 +123,22 @@ function FileExplorerPage() {
     fd.append('file', fileToUpload);
 
     try {
-      const res = await fetch('/api/filemanager.php', {
-        method: 'POST',
-        body: fd,
-      });
-      const j = await res.json();
-      if (j.success) {
-        setSnack({ open: true, msg: 'Uploaded!' });
-        setFileToUpload(null);
-        fetchList();
-      } else {
-        setSnack({ open: true, msg: j.error || 'Upload failed' });
-      }
-    } catch {
-      setSnack({ open: true, msg: 'Upload error' });
+      const res = await fetch('/api/filemanager.php', { method: 'POST', body: fd });
+      const j   = await res.json();
+      if (!j.success) throw new Error(j.error || 'Upload failed');
+      setSnack({ open: true, msg: 'Uploaded!' });
+      setFileToUpload(null);
+      fetchList();
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setSnack({ open: true, msg: err.message });
     } finally {
       setUploading(false);
     }
   };
 
-  // delete handler
+  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
+  // Delete handler
   const doDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -151,19 +151,18 @@ function FileExplorerPage() {
         }),
       });
       const j = await res.json();
-      if (j.success) {
-        setSnack({ open: true, msg: 'Deleted!' });
-        setConfirmDelete(null);
-        fetchList();
-      } else {
-        setSnack({ open: true, msg: j.error || 'Delete failed' });
-      }
-    } catch {
-      setSnack({ open: true, msg: 'Delete error' });
+      if (!j.success) throw new Error(j.error || 'Delete failed');
+      setSnack({ open: true, msg: 'Deleted!' });
+      setConfirmDelete(null);
+      fetchList();
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      setSnack({ open: true, msg: err.message });
     }
   };
 
-  // rename handler
+  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
+  // Rename handler
   const doRename = async () => {
     if (!renameItem) return;
     try {
@@ -177,19 +176,18 @@ function FileExplorerPage() {
         }),
       });
       const j = await res.json();
-      if (j.success) {
-        setSnack({ open: true, msg: 'Renamed!' });
-        setRenameItem(null);
-        fetchList();
-      } else {
-        setSnack({ open: true, msg: j.error || 'Rename failed' });
-      }
-    } catch {
-      setSnack({ open: true, msg: 'Rename error' });
+      if (!j.success) throw new Error(j.error || 'Rename failed');
+      setSnack({ open: true, msg: 'Renamed!' });
+      setRenameItem(null);
+      fetchList();
+    } catch (err: any) {
+      console.error('Rename error:', err);
+      setSnack({ open: true, msg: err.message });
     }
   };
 
-  // new folder handler
+  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
+  // New folder handler
   const doCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     try {
@@ -203,38 +201,39 @@ function FileExplorerPage() {
         }),
       });
       const j = await res.json();
-      if (j.success) {
-        setSnack({ open: true, msg: 'Folder created!' });
-        setNewFolderDialog(false);
-        setNewFolderName('');
-        fetchList();
-      } else {
-        setSnack({ open: true, msg: j.error || 'Create folder failed' });
-      }
-    } catch {
-      setSnack({ open: true, msg: 'Create folder error' });
+      if (!j.success) throw new Error(j.error || 'Create folder failed');
+      setSnack({ open: true, msg: 'Folder created!' });
+      setNewFolderDialog(false);
+      setNewFolderName('');
+      fetchList();
+    } catch (err: any) {
+      console.error('Mkdir error:', err);
+      setSnack({ open: true, msg: err.message });
     }
   };
 
+  //–––––––––––––––––––––––––––––––––––––––––––––––––––––
   return (
     <Box sx={{ p: 3 }}>
-      {/* Upload + New Folder */}
+      {/* Upload + New Folder Row */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <Typography variant="h6">/ {path}</Typography>
 
-        {/* file input */}
-        <input
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          id="file-upload"
-          onChange={(e) => setFileToUpload(e.target.files?.[0] || null)}
-        />
-        <label htmlFor="file-upload">
-          <Button variant="contained" startIcon={<UploadIcon />}>
-            Choose File
-          </Button>
-        </label>
+        {/* MUI Button as file input */}
+        <Button
+          variant="contained"
+          component="label"
+          startIcon={<UploadIcon />}
+        >
+          Choose File
+          <input
+            hidden
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)}
+          />
+        </Button>
+
         <Button
           variant="contained"
           disabled={!fileToUpload || uploading}
@@ -252,12 +251,11 @@ function FileExplorerPage() {
         </Button>
       </Stack>
 
-      {/* Grid view */}
+      {/* Grid of folders & images */}
       {loading ? (
         <CircularProgress />
       ) : (
         <Grid container spacing={2}>
-          {/* Up button */}
           {path && (
             <Grid item xs={3}>
               <Card
@@ -272,7 +270,6 @@ function FileExplorerPage() {
             </Grid>
           )}
 
-          {/* Items */}
           {items.map((it) => (
             <Grid item xs={3} key={it.name}>
               <Card sx={{ position: 'relative', p: 1 }}>
@@ -287,7 +284,6 @@ function FileExplorerPage() {
                 >
                   <EditIcon fontSize="small" />
                 </IconButton>
-
                 {/* Delete */}
                 <IconButton
                   size="small"
@@ -306,11 +302,7 @@ function FileExplorerPage() {
                       setLightboxOpen(true);
                     }
                   }}
-                  sx={{
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    pt: 2,
-                  }}
+                  sx={{ cursor: 'pointer', textAlign: 'center', pt: 2 }}
                 >
                   {it.type === 'folder' ? (
                     <FolderIcon fontSize="large" />
@@ -348,7 +340,7 @@ function FileExplorerPage() {
         </Grid>
       )}
 
-      {/* Delete Confirmation */}
+      {/* Delete Dialog */}
       <Dialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
@@ -419,7 +411,7 @@ function FileExplorerPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Lightbox */}
+      {/* Image Lightbox */}
       <Dialog
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
@@ -464,9 +456,7 @@ function LayoutWrapper() {
   );
 }
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root')!
-);
+const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
