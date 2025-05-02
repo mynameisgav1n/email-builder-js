@@ -27,7 +27,7 @@ import {
   Edit as EditIcon,
   ArrowUpward as UpIcon,
   Folder as FolderIcon,
-  Image as ImageIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
@@ -37,7 +37,10 @@ import theme from './theme';
 
 interface FileItem {
   name: string;
-  type: 'file' | 'dir';
+  type: 'folder' | 'file';
+  url?: string;
+  username?: string;
+  creation_date?: string;
 }
 
 function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
@@ -51,23 +54,36 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
 }
 
 function FileExplorerPage() {
-  const [path, setPath] = useState<string>('');
+  const [path, setPath] = useState<string>(''); // relative path
   const [items, setItems] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // upload
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
 
+  // delete
   const [confirmDelete, setConfirmDelete] = useState<FileItem | null>(null);
+
+  // rename
   const [renameItem, setRenameItem] = useState<FileItem | null>(null);
   const [renameValue, setRenameValue] = useState<string>('');
 
+  // new folder
+  const [newFolderDialog, setNewFolderDialog] = useState<boolean>(false);
+  const [newFolderName, setNewFolderName] = useState<string>('');
+
+  // lightbox
+  const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string>('');
+
+  // snackbar
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({
     open: false,
     msg: '',
   });
 
-  // Fetch directory listing
+  // fetch directory listing
   const fetchList = async () => {
     setLoading(true);
     try {
@@ -91,10 +107,11 @@ function FileExplorerPage() {
     fetchList();
   }, [path]);
 
-  // Upload handler
+  // upload handler
   const doUpload = async () => {
     if (!fileToUpload) return;
     setUploading(true);
+
     const fd = new FormData();
     fd.append('action', 'upload');
     fd.append('path', path);
@@ -121,16 +138,18 @@ function FileExplorerPage() {
     }
   };
 
-  // Delete handler
+  // delete handler
   const doDelete = async () => {
     if (!confirmDelete) return;
-    const target = path + '/' + confirmDelete.name;
     try {
-      const res = await fetch(
-        `/api/filemanager.php?action=delete&path=${encodeURIComponent(
-          target
-        )}`
-      );
+      const res = await fetch('/api/filemanager.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          name: path ? `${path}/${confirmDelete.name}` : confirmDelete.name,
+        }),
+      });
       const j = await res.json();
       if (j.success) {
         setSnack({ open: true, msg: 'Deleted!' });
@@ -144,18 +163,18 @@ function FileExplorerPage() {
     }
   };
 
-  // Rename handler
+  // rename handler
   const doRename = async () => {
     if (!renameItem) return;
-    const fd = new FormData();
-    fd.append('action', 'rename');
-    fd.append('path', path + '/' + renameItem.name);
-    fd.append('newName', renameValue);
-
     try {
       const res = await fetch('/api/filemanager.php', {
         method: 'POST',
-        body: fd,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'rename',
+          old: path ? `${path}/${renameItem.name}` : renameItem.name,
+          new: renameValue,
+        }),
       });
       const j = await res.json();
       if (j.success) {
@@ -170,14 +189,43 @@ function FileExplorerPage() {
     }
   };
 
+  // new folder handler
+  const doCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      const res = await fetch('/api/filemanager.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mkdir',
+          path,
+          name: newFolderName.trim(),
+        }),
+      });
+      const j = await res.json();
+      if (j.success) {
+        setSnack({ open: true, msg: 'Folder created!' });
+        setNewFolderDialog(false);
+        setNewFolderName('');
+        fetchList();
+      } else {
+        setSnack({ open: true, msg: j.error || 'Create folder failed' });
+      }
+    } catch {
+      setSnack({ open: true, msg: 'Create folder error' });
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
-      {/* Breadcrumb + Upload */}
+      {/* Upload + New Folder */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-        <Typography variant="h6">/ {path || ''}</Typography>
+        <Typography variant="h6">/ {path}</Typography>
+
+        {/* file input */}
         <input
           type="file"
-          accept="*/*"
+          accept="image/*"
           style={{ display: 'none' }}
           id="file-upload"
           onChange={(e) => setFileToUpload(e.target.files?.[0] || null)}
@@ -194,13 +242,22 @@ function FileExplorerPage() {
         >
           {uploading ? <CircularProgress size={18} /> : 'Upload'}
         </Button>
+
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={() => setNewFolderDialog(true)}
+        >
+          New Folder
+        </Button>
       </Stack>
 
-      {/* File / Folder Grid */}
+      {/* Grid view */}
       {loading ? (
         <CircularProgress />
       ) : (
         <Grid container spacing={2}>
+          {/* Up button */}
           {path && (
             <Grid item xs={3}>
               <Card
@@ -215,6 +272,7 @@ function FileExplorerPage() {
             </Grid>
           )}
 
+          {/* Items */}
           {items.map((it) => (
             <Grid item xs={3} key={it.name}>
               <Card sx={{ position: 'relative', p: 1 }}>
@@ -239,24 +297,50 @@ function FileExplorerPage() {
                   <DeleteIcon fontSize="small" />
                 </IconButton>
 
-                {/* Icon + Name */}
                 <CardContent
                   onClick={() => {
-                    if (it.type === 'dir') {
-                      setPath(path ? path + '/' + it.name : it.name);
+                    if (it.type === 'folder') {
+                      setPath(path ? `${path}/${it.name}` : it.name);
+                    } else {
+                      setLightboxUrl(it.url!);
+                      setLightboxOpen(true);
                     }
                   }}
                   sx={{
-                    cursor: it.type === 'dir' ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     textAlign: 'center',
+                    pt: 2,
                   }}
                 >
-                  {it.type === 'dir' ? (
+                  {it.type === 'folder' ? (
                     <FolderIcon fontSize="large" />
                   ) : (
-                    <ImageIcon fontSize="large" />
+                    <Box
+                      component="img"
+                      src={it.url}
+                      sx={{
+                        width: '100%',
+                        height: 120,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                      }}
+                    />
                   )}
-                  <Typography noWrap>{it.name}</Typography>
+
+                  <Typography noWrap mt={1}>
+                    {it.name}
+                  </Typography>
+
+                  {it.type === 'file' && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      {it.username} •{' '}
+                      {new Date(it.creation_date!).toLocaleString()}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -268,8 +352,8 @@ function FileExplorerPage() {
       <Dialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        maxWidth="xs"
         fullWidth
+        maxWidth="xs"
       >
         <DialogTitle>Delete “{confirmDelete?.name}”?</DialogTitle>
         <DialogActions>
@@ -301,14 +385,52 @@ function FileExplorerPage() {
         <DialogActions>
           <Button onClick={() => setRenameItem(null)}>Cancel</Button>
           <Button
-            disabled={
-              !renameValue.trim() || renameValue === renameItem?.name
-            }
+            disabled={!renameValue.trim() || renameValue === renameItem?.name}
             onClick={doRename}
           >
             Save
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* New Folder Dialog */}
+      <Dialog
+        open={newFolderDialog}
+        onClose={() => setNewFolderDialog(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>New Folder</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            label="Folder Name"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewFolderDialog(false)}>Cancel</Button>
+          <Button onClick={doCreateFolder} disabled={!newFolderName.trim()}>
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Lightbox */}
+      <Dialog
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <Box
+          component="img"
+          src={lightboxUrl}
+          sx={{ width: '100%', height: 'auto' }}
+        />
       </Dialog>
 
       {/* Snackbar */}
@@ -332,9 +454,7 @@ function LayoutWrapper() {
       <SamplesDrawer />
       <Stack
         sx={{
-          marginLeft: samplesOpen
-            ? `${SAMPLES_DRAWER_WIDTH}px`
-            : 0,
+          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
           transition: ml,
         }}
       >
