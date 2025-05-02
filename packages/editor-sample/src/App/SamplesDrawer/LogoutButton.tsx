@@ -12,8 +12,8 @@ export default function LogoutButton() {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleLogout = async () => {
-    setConfirmOpen(false); // Close dialog first
-    alert("You've been logged out!"); // Show alert
+    setConfirmOpen(false); // Close confirmation popup
+    alert("You've been logged out!");
 
     await fetch('/api/protected-test.php', {
       method: 'GET',
@@ -22,7 +22,7 @@ export default function LogoutButton() {
       },
     });
 
-    window.location.reload(); // Optional: reload to prompt login
+    window.location.reload();
   };
 
   return (
@@ -30,8 +30,9 @@ export default function LogoutButton() {
       <Button
         size="small"
         color="error"
-        variant="contained" // or "outlined" if you prefer a border only
+        variant="text"
         onClick={() => setConfirmOpen(true)}
+        sx={{ fontWeight: 400 }} // subtle font weight
       >
         Log Out
       </Button>
