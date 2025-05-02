@@ -5,8 +5,8 @@ import {
   Card, CardContent, Stack, CircularProgress, Tooltip
 } from '@mui/material';
 import { Delete, Edit, FileCopy, Folder, InsertDriveFile, Image } from '@mui/icons-material';
-import Lightbox from 'react-image-lightbox';
-import 'react-image-lightbox/style.css';
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 
 interface FileItem {
   name: string;
@@ -27,7 +27,7 @@ export default function FileManager() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const username = 'gavin'; // TODO: dynamically fetch via API if needed
+  const username = 'gavin'; // TODO: replace with dynamic session-based user if needed
 
   const fetchFiles = async () => {
     setLoading(true);
@@ -178,8 +178,9 @@ export default function FileManager() {
 
       {lightboxUrl && (
         <Lightbox
-          mainSrc={lightboxUrl}
-          onCloseRequest={() => setLightboxUrl(null)}
+          open
+          close={() => setLightboxUrl(null)}
+          slides={[{ src: lightboxUrl }]}
         />
       )}
 
