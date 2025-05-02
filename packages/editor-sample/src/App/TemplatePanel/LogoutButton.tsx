@@ -7,12 +7,12 @@ export default function Trigger401Button() {
 
   const handleClick = async () => {
     try {
-      const response = await fetch('/api/protected-test', {
+      const response = await fetch('/api/protected-test.php', {
         method: 'GET',
-        // No credentials or headers on purpose to trigger 401
       });
 
       setStatusCode(response.status);
+
       if (response.status === 401) {
         setOpen(true);
       } else {
@@ -26,7 +26,7 @@ export default function Trigger401Button() {
   return (
     <>
       <Button variant="contained" color="error" onClick={handleClick}>
-        Logout
+        Trigger 401 Unauthorized
       </Button>
       <Snackbar
         open={open}
