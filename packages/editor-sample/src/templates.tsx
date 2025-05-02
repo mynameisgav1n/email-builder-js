@@ -74,7 +74,6 @@ function TemplatesPage() {
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Link
                     href={`/${template.short_link}`}
-                    target="_blank"
                     rel="noopener"
                     underline="hover"
                   >
