@@ -2,8 +2,13 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
   Box,
-  Card,
-  CardContent,
+  Breadcrumbs,
+  Link,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
   Typography,
   Stack,
   CircularProgress,
@@ -11,22 +16,22 @@ import {
   ThemeProvider,
   useTheme,
   Button,
+  TextField,
+  IconButton,
+  Tooltip,
+  Snackbar,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  Snackbar,
-  IconButton,
-  Tooltip
+  DialogActions
 } from '@mui/material';
 import {
-  Delete,
-  Edit,
+  Folder as FolderIcon,
+  InsertDriveFile as FileIcon,
   FileCopy,
-  Folder,
-  InsertDriveFile,
-  Image as ImageIcon
+  Edit,
+  Delete,
+  ArrowUpward
 } from '@mui/icons-material';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
@@ -54,17 +59,16 @@ interface FileItem {
 
 function FileManagerPage() {
   const [items, setItems] = useState<FileItem[]>([]);
-  const [path, setPath] = useState('');
+  const [path, setPath] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
-  const [folderName, setFolderName] = useState('');
+  const [folderName, setFolderName] = useState<string>('');
   const [renameTarget, setRenameTarget] = useState<string | null>(null);
-  const [renameNew, setRenameNew] = useState('');
+  const [renameNew, setRenameNew] = useState<string>('');
   const [message, setMessage] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
 
-  // fetch current user
   useEffect(() => {
     fetch('/api/user.php')
       .then(res => res.json())
@@ -72,12 +76,11 @@ function FileManagerPage() {
       .catch(() => setUsername(''));
   }, []);
 
-  // list files/folders
   const fetchFiles = async () => {
     setLoading(true);
     const res = await fetch(`/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`);
     const data = await res.json();
-    setItems(data.items || []);
+    setItems((data.items || []).filter(item => !item.name.startsWith('.')));
     setLoading(false);
   };
 
@@ -85,13 +88,21 @@ function FileManagerPage() {
     fetchFiles();
   }, [path]);
 
-  // upload
+  const navigateUp = () => {
+    const parts = path.split('/').filter(Boolean);
+    parts.pop();
+    setPath(parts.join('/'));
+  };
+
+  const navigateInto = (name: string) => {
+    setPath(prev => prev ? `${prev}/${name}` : name);
+  };
+
   const upload = async () => {
     if (!file || !username) return;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('username', username);
-
     const res = await fetch(`/api/filemanager.php?action=upload&path=${encodeURIComponent(path)}`, {
       method: 'POST',
       body: formData,
@@ -102,36 +113,6 @@ function FileManagerPage() {
     fetchFiles();
   };
 
-  // delete
-  const deleteItem = async (name: string) => {
-    if (!window.confirm(`Delete ${name}?`)) return;
-    const res = await fetch(`/api/filemanager.php?action=delete`, {
-      method: 'POST',
-      body: new URLSearchParams({ name: `${path}/${name}` }),
-    });
-    const data = await res.json();
-    setMessage(data.success ? 'Deleted' : data.error);
-    fetchFiles();
-  };
-
-  // rename
-  const renameItem = async () => {
-    if (!renameTarget || !renameNew) return;
-    const res = await fetch(`/api/filemanager.php?action=rename`, {
-      method: 'POST',
-      body: new URLSearchParams({
-        old: `${path}/${renameTarget}`,
-        new: renameNew,
-      }),
-    });
-    const data = await res.json();
-    setRenameTarget(null);
-    setRenameNew('');
-    setMessage(data.success ? 'Renamed' : data.error);
-    fetchFiles();
-  };
-
-  // mkdir
   const createFolder = async () => {
     if (!folderName) return;
     const res = await fetch(`/api/filemanager.php?action=mkdir`, {
@@ -139,32 +120,86 @@ function FileManagerPage() {
       body: new URLSearchParams({ path, name: folderName }),
     });
     const data = await res.json();
-    setFolderName('');
     setMessage(data.success ? 'Folder created' : data.error);
+    setFolderName('');
     fetchFiles();
   };
 
-  // copy link
+  const deleteItem = async (name: string) => {
+    if (!window.confirm(`Delete ${name}?`)) return;
+    const res = await fetch(`/api/filemanager.php?action=delete`, {
+      method: 'POST',
+      body: new URLSearchParams({ name: path ? `${path}/${name}` : name }),
+    });
+    const data = await res.json();
+    setMessage(data.success ? 'Deleted' : data.error);
+    fetchFiles();
+  };
+
+  const renameItem = async () => {
+    if (!renameTarget || !renameNew) return;
+    const res = await fetch(`/api/filemanager.php?action=rename`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        old: path ? `${path}/${renameTarget}` : renameTarget,
+        new: renameNew,
+      }),
+    });
+    const data = await res.json();
+    setMessage(data.success ? 'Renamed' : data.error);
+    setRenameTarget(null);
+    setRenameNew('');
+    fetchFiles();
+  };
+
   const copyLink = (url: string) => {
     navigator.clipboard.writeText(`${location.origin}${url}`);
     setMessage('Link copied!');
   };
 
+  // breadcrumbs
+  const parts = path.split('/').filter(Boolean);
+  const crumbs = [{ label: 'Home', value: '' }, ...parts.map((p, i) => ({
+    label: p,
+    value: parts.slice(0, i + 1).join('/')
+  }))];
+
   return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h5" fontWeight={600} mb={2}>
-        Public File Manager
-      </Typography>
+    <Box sx={{ p: 3 }}>
+      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+        {path && (
+          <IconButton size="small" onClick={navigateUp}>
+            <ArrowUpward />
+          </IconButton>
+        )}
+        <Breadcrumbs aria-label="breadcrumb">
+          {crumbs.map(({ label, value }, i) => (
+            <Link
+              key={i}
+              component="button"
+              underline="hover"
+              color={i === crumbs.length - 1 ? 'text.primary' : 'inherit'}
+              onClick={() => setPath(value)}
+            >
+              {label}
+            </Link>
+          ))}
+        </Breadcrumbs>
+      </Stack>
 
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <TextField
           size="small"
           label="New Folder"
           value={folderName}
-          onChange={(e) => setFolderName(e.target.value)}
+          onChange={e => setFolderName(e.target.value)}
         />
         <Button onClick={createFolder} variant="outlined">Create Folder</Button>
-        <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={e => setFile(e.target.files?.[0] || null)}
+        />
         <Button onClick={upload} variant="contained" disabled={!file || !username}>
           Upload Image
         </Button>
@@ -173,61 +208,67 @@ function FileManagerPage() {
       {loading ? (
         <CircularProgress />
       ) : (
-        <Stack spacing={2}>
-          {items.map(item => (
-            <Card key={item.name} variant="outlined">
-              <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    {item.type === 'folder' ? <Folder /> : (
-                      item.url?.match(/\.(jpe?g|png|gif|webp)$/i)
-                        ? <ImageIcon />
-                        : <InsertDriveFile />
-                    )}
-                    <Typography
-                      variant="body1"
-                      sx={{ cursor: item.type === 'file' && item.url ? 'pointer' : 'default' }}
-                      onClick={() =>
-                        item.url?.match(/\.(jpe?g|png|gif|webp)$/i) &&
-                        setLightboxUrl(item.url)
-                      }
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Uploaded By</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map(item => (
+              <TableRow key={item.name} hover>
+                <TableCell>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    {item.type === 'folder' ? <FolderIcon /> : <FileIcon />}
+                    <Link
+                      component="button"
+                      underline="hover"
+                      onClick={() => {
+                        if (item.type === 'folder') navigateInto(item.name);
+                        else if (item.url?.match(/\.(jpe?g|png|gif|webp)$/i)) {
+                          setLightboxUrl(item.url);
+                        }
+                      }}
                     >
                       {item.name}
-                    </Typography>
+                    </Link>
                   </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    {item.username && (
-                      <Typography variant="caption" sx={{ color: '#555' }}>
-                        uploaded by {item.username} on{' '}
-                        {new Date(item.creation_date!).toLocaleString()}
-                      </Typography>
-                    )}
-                    {item.url && (
-                      <Tooltip title="Copy link">
-                        <IconButton onClick={() => copyLink(item.url)}>
-                          <FileCopy />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    <Tooltip title="Rename">
-                      <IconButton onClick={() => {
-                        setRenameTarget(item.name);
-                        setRenameNew(item.name);
-                      }}>
-                        <Edit />
+                </TableCell>
+                <TableCell>{item.username || '-'}</TableCell>
+                <TableCell>
+                  {item.creation_date
+                    ? new Date(item.creation_date).toLocaleString()
+                    : '-'}
+                </TableCell>
+                <TableCell align="right">
+                  {item.url && (
+                    <Tooltip title="Copy link">
+                      <IconButton onClick={() => copyLink(item.url)}>
+                        <FileCopy />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={() => deleteItem(item.name)}>
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
+                  )}
+                  <Tooltip title="Rename">
+                    <IconButton onClick={() => {
+                      setRenameTarget(item.name);
+                      setRenameNew(item.name);
+                    }}>
+                      <Edit />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton onClick={() => deleteItem(item.name)}>
+                      <Delete />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       <Dialog open={!!renameTarget} onClose={() => setRenameTarget(null)} fullWidth>
@@ -238,8 +279,7 @@ function FileManagerPage() {
             fullWidth
             label="New Name"
             value={renameNew}
-            onChange={(e) => setRenameNew(e.target.value)}
-            variant="outlined"
+            onChange={e => setRenameNew(e.target.value)}
             size="small"
           />
         </DialogContent>
