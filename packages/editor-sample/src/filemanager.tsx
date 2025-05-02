@@ -8,6 +8,10 @@ import { Delete, Edit, FileCopy, Folder, InsertDriveFile, Image } from '@mui/ico
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 
+export default function FileManager() {
+  return <h1 style={{ padding: 100 }}>Hello from FileManager</h1>;
+}
+
 interface FileItem {
   name: string;
   type: 'file' | 'folder';
