@@ -1,338 +1,219 @@
 import React, { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom/client';
 import {
-  Box,
-  Breadcrumbs,
-  Link,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Typography,
-  Stack,
-  CircularProgress,
-  CssBaseline,
-  ThemeProvider,
-  useTheme,
-  Button,
-  TextField,
-  IconButton,
-  Tooltip,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Box, Grid, Card, CardContent, Typography,
+  Button, IconButton, Snackbar, Dialog,
+  DialogTitle, DialogContent, DialogActions,
+  TextField, CircularProgress
 } from '@mui/material';
 import {
+  Upload as UploadIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  ArrowUpward as UpIcon,
   Folder as FolderIcon,
-  InsertDriveFile as FileIcon,
-  FileCopy,
-  Edit,
-  Delete,
-  ArrowUpward
+  Image as ImageIcon
 } from '@mui/icons-material';
-import Lightbox from 'yet-another-react-lightbox';
-import 'yet-another-react-lightbox/styles.css';
 
-import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
-import SamplesDrawer from './App/SamplesDrawer';
-import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
-import theme from './theme';
-
-function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
-  const { transitions } = useTheme();
-  return transitions.create(cssProp, {
-    easing: !open ? transitions.easing.sharp : transitions.easing.easeOut,
-    duration: !open ? transitions.duration.leavingScreen : transitions.duration.enteringScreen,
-  });
-}
-
-interface FileItem {
+interface Item {
   name: string;
-  type: 'file' | 'folder';
-  url?: string;
-  username?: string;
-  creation_date?: string;
+  type: 'file' | 'dir';
 }
 
-function FileManagerPage() {
-  const [items, setItems] = useState<FileItem[]>([]);
-  const [path, setPath] = useState<string>('');
-  const [file, setFile] = useState<File | null>(null);
-  const [folderName, setFolderName] = useState<string>('');
-  const [renameTarget, setRenameTarget] = useState<string | null>(null);
-  const [renameNew, setRenameNew] = useState<string>('');
-  const [message, setMessage] = useState<string | null>(null);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [username, setUsername] = useState<string>('');
+export default function FileManager({ username }: { username: string }) {
+  const [path, setPath] = useState('');
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fileToUpload, setFileToUpload] = useState<File|null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Item|null>(null);
+  const [renameItem, setRenameItem] = useState<Item|null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [snack, setSnack] = useState<{open:boolean;msg:string}>({open:false,msg:''});
 
-  useEffect(() => {
-    fetch('/api/user.php')
-      .then(res => res.json())
-      .then(data => setUsername(data.username || ''))
-      .catch(() => setUsername(''));
-  }, []);
-
-  const fetchFiles = async () => {
+  // fetch listing
+  const fetchList = async () => {
     setLoading(true);
-    const res = await fetch(`/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`);
-    const data = await res.json();
-    setItems((data.items || []).filter(item => !item.name.startsWith('.')));
+    const res = await fetch(`filemanager.php?action=list&path=${encodeURIComponent(path)}`);
+    const json = await res.json();
+    if (!json.error) setItems(json.items);
     setLoading(false);
   };
+  useEffect(() => { fetchList() }, [path]);
 
-  useEffect(() => {
-    fetchFiles();
-  }, [path]);
-
-  const navigateUp = () => {
-    const parts = path.split('/').filter(Boolean);
-    parts.pop();
-    setPath(parts.join('/'));
+  // upload
+  const doUpload = async () => {
+    if (!fileToUpload) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append('action','upload');
+    fd.append('path', path);
+    fd.append('username', username);
+    fd.append('file', fileToUpload);
+    const res = await fetch('filemanager.php', { method:'POST', body:fd });
+    const j = await res.json();
+    setUploading(false);
+    if (j.success) {
+      setSnack({open:true,msg:'Uploaded!'});
+      setFileToUpload(null);
+      fetchList();
+    } else {
+      setSnack({open:true,msg:`Upload failed: ${j.error}`});
+    }
   };
 
-  const navigateInto = (name: string) => {
-    setPath(prev => prev ? `${prev}/${name}` : name);
+  // delete
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    const target = path + '/' + confirmDelete.name;
+    const res = await fetch(`filemanager.php?action=delete&path=${encodeURIComponent(target)}`);
+    const j = await res.json();
+    if (j.success) {
+      setSnack({open:true,msg:'Deleted!'});
+      setConfirmDelete(null);
+      fetchList();
+    } else {
+      setSnack({open:true,msg:`Delete failed: ${j.error}`});
+    }
   };
 
-  const upload = async () => {
-    if (!file || !username) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('username', username);
-    const res = await fetch(`/api/filemanager.php?action=upload&path=${encodeURIComponent(path)}`, {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await res.json();
-    setMessage(data.success ? 'Upload successful' : data.error || 'Upload failed');
-    setFile(null);
-    fetchFiles();
+  // rename
+  const doRename = async () => {
+    if (!renameItem) return;
+    const fd = new FormData();
+    fd.append('action','rename');
+    fd.append('path', path + '/' + renameItem.name);
+    fd.append('newName', renameValue);
+    const res = await fetch('filemanager.php', { method:'POST', body:fd });
+    const j = await res.json();
+    if (j.success) {
+      setSnack({open:true,msg:'Renamed!'});
+      setRenameItem(null);
+      fetchList();
+    } else {
+      setSnack({open:true,msg:`Rename failed: ${j.error}`});
+    }
   };
-
-  const createFolder = async () => {
-    if (!folderName) return;
-    const res = await fetch(`/api/filemanager.php?action=mkdir`, {
-      method: 'POST',
-      body: new URLSearchParams({ path, name: folderName }),
-    });
-    const data = await res.json();
-    setMessage(data.success ? 'Folder created' : data.error);
-    setFolderName('');
-    fetchFiles();
-  };
-
-  const deleteItem = async (name: string) => {
-    if (!window.confirm(`Delete ${name}?`)) return;
-    const res = await fetch(`/api/filemanager.php?action=delete`, {
-      method: 'POST',
-      body: new URLSearchParams({ name: path ? `${path}/${name}` : name }),
-    });
-    const data = await res.json();
-    setMessage(data.success ? 'Deleted' : data.error);
-    fetchFiles();
-  };
-
-  const renameItem = async () => {
-    if (!renameTarget || !renameNew) return;
-    const res = await fetch(`/api/filemanager.php?action=rename`, {
-      method: 'POST',
-      body: new URLSearchParams({
-        old: path ? `${path}/${renameTarget}` : renameTarget,
-        new: renameNew,
-      }),
-    });
-    const data = await res.json();
-    setMessage(data.success ? 'Renamed' : data.error);
-    setRenameTarget(null);
-    setRenameNew('');
-    fetchFiles();
-  };
-
-  const copyLink = (url: string) => {
-    navigator.clipboard.writeText(`${location.origin}${url}`);
-    setMessage('Link copied!');
-  };
-
-  // breadcrumbs
-  const parts = path.split('/').filter(Boolean);
-  const crumbs = [{ label: 'Home', value: '' }, ...parts.map((p, i) => ({
-    label: p,
-    value: parts.slice(0, i + 1).join('/')
-  }))];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-        {path && (
-          <IconButton size="small" onClick={navigateUp}>
-            <ArrowUpward />
-          </IconButton>
-        )}
-        <Breadcrumbs aria-label="breadcrumb">
-          {crumbs.map(({ label, value }, i) => (
-            <Link
-              key={i}
-              component="button"
-              underline="hover"
-              color={i === crumbs.length - 1 ? 'text.primary' : 'inherit'}
-              onClick={() => setPath(value)}
-            >
-              {label}
-            </Link>
-          ))}
-        </Breadcrumbs>
-      </Stack>
-
-      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-        <TextField
-          size="small"
-          label="New Folder"
-          value={folderName}
-          onChange={e => setFolderName(e.target.value)}
-        />
-        <Button onClick={createFolder} variant="outlined">Create Folder</Button>
+    <Box p={2}>
+      {/* Upload controls */}
+      <Box display="flex" alignItems="center" mb={2} gap={1}>
+        <Typography variant="h6">/ {path || ''}</Typography>
         <input
-          type="file"
-          accept="image/*"
-          onChange={e => setFile(e.target.files?.[0] || null)}
+          type="file" accept="image/*"
+          style={{ display: 'none' }}
+          id="upload-input"
+          onChange={e => setFileToUpload(e.target.files![0])}
         />
-        <Button onClick={upload} variant="contained" disabled={!file || !username}>
-          Upload Image
+        <label htmlFor="upload-input">
+          <Button variant="contained" startIcon={<UploadIcon />}>Choose File</Button>
+        </label>
+        <Button
+          variant="contained" color="primary"
+          disabled={!fileToUpload || uploading}
+          onClick={doUpload}
+        >
+          {uploading ? <CircularProgress size={20}/> : 'Upload'}
         </Button>
-      </Stack>
+      </Box>
 
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Uploaded By</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {items.map(item => (
-              <TableRow key={item.name} hover>
-                <TableCell>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    {item.type === 'folder' ? <FolderIcon /> : <FileIcon />}
-                    <Link
-                      component="button"
-                      underline="hover"
-                      onClick={() => {
-                        if (item.type === 'folder') navigateInto(item.name);
-                        else if (item.url?.match(/\.(jpe?g|png|gif|webp)$/i)) {
-                          setLightboxUrl(item.url);
-                        }
-                      }}
-                    >
-                      {item.name}
-                    </Link>
-                  </Stack>
-                </TableCell>
-                <TableCell>{item.username || '-'}</TableCell>
-                <TableCell>
-                  {item.creation_date
-                    ? new Date(item.creation_date).toLocaleString()
-                    : '-'}
-                </TableCell>
-                <TableCell align="right">
-                  {item.url && (
-                    <Tooltip title="Copy link">
-                      <IconButton onClick={() => copyLink(item.url)}>
-                        <FileCopy />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <Tooltip title="Rename">
-                    <IconButton onClick={() => {
-                      setRenameTarget(item.name);
-                      setRenameNew(item.name);
-                    }}>
-                      <Edit />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton onClick={() => deleteItem(item.name)}>
-                      <Delete />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
+      {/* File / Folder Grid */}
+      {loading
+        ? <CircularProgress />
+        : <Grid container spacing={2}>
+            {path && (
+              <Grid item xs={3}>
+                <Card
+                  onClick={() => setPath(path.split('/').slice(0,-1).join('/'))}
+                  sx={{ cursor:'pointer', textAlign:'center', p:2 }}
+                >
+                  <UpIcon fontSize="large" />
+                  <Typography>Up</Typography>
+                </Card>
+              </Grid>
+            )}
+            {items.map(it => (
+              <Grid item xs={3} key={it.name}>
+                <Card sx={{ position:'relative', p:1 }}>
+                  {/* Rename Icon */}
+                  <IconButton
+                    size="small"
+                    sx={{ position:'absolute', top:4, left:4 }}
+                    onClick={() => {
+                      setRenameItem(it);
+                      setRenameValue(it.name);
+                    }}
+                  >
+                    <EditIcon fontSize="small"/>
+                  </IconButton>
+
+                  {/* Delete Icon */}
+                  <IconButton
+                    size="small"
+                    sx={{ position:'absolute', top:4, right:4 }}
+                    onClick={() => setConfirmDelete(it)}
+                  >
+                    <DeleteIcon fontSize="small"/>
+                  </IconButton>
+
+                  {/* Icon + Name */}
+                  <CardContent
+                    onClick={() => it.type==='dir' && setPath(path ? path + '/' + it.name : it.name)}
+                    sx={{
+                      cursor: it.type==='dir' ? 'pointer' : 'default',
+                      textAlign:'center'
+                    }}
+                  >
+                    {it.type==='dir'
+                      ? <FolderIcon fontSize="large"/>
+                      : <ImageIcon fontSize="large"/>
+                    }
+                    <Typography noWrap>{it.name}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
             ))}
-          </TableBody>
-        </Table>
-      )}
+          </Grid>
+      }
 
-      <Dialog open={!!renameTarget} onClose={() => setRenameTarget(null)} fullWidth>
-        <DialogTitle>Rename "{renameTarget}"</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="New Name"
-            value={renameNew}
-            onChange={e => setRenameNew(e.target.value)}
-            size="small"
-          />
-        </DialogContent>
+      {/* Delete Confirmation */}
+      <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
+        <DialogTitle>Delete {confirmDelete?.name}?</DialogTitle>
         <DialogActions>
-          <Button onClick={() => setRenameTarget(null)}>Cancel</Button>
-          <Button onClick={renameItem} variant="contained">Rename</Button>
+          <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
+          <Button color="error" onClick={doDelete}>Delete</Button>
         </DialogActions>
       </Dialog>
 
-      {lightboxUrl && (
-        <Lightbox
-          open
-          close={() => setLightboxUrl(null)}
-          slides={[{ src: lightboxUrl }]}
-        />
-      )}
+      {/* Rename Dialog */}
+      <Dialog open={!!renameItem} onClose={() => setRenameItem(null)}>
+        <DialogTitle>Rename {renameItem?.name}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="New name"
+            value={renameValue}
+            onChange={e => setRenameValue(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameItem(null)}>Cancel</Button>
+          <Button
+            disabled={!renameValue || renameValue === renameItem?.name}
+            onClick={doRename}
+          >
+            Rename
+          </Button>
+        </DialogActions>
+      </Dialog>
 
+      {/* Snackbar */}
       <Snackbar
-        open={!!message}
+        open={snack.open}
         autoHideDuration={3000}
-        onClose={() => setMessage(null)}
-        message={message}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        message={snack.msg}
+        onClose={() => setSnack(s => ({...s,open:false}))}
       />
     </Box>
   );
 }
-
-function LayoutWrapper() {
-  const samplesOpen = useSamplesDrawerOpen();
-  const mlTransition = useDrawerTransition('margin-left', samplesOpen);
-
-  return (
-    <>
-      <SamplesDrawer />
-      <Stack
-        sx={{
-          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          transition: mlTransition,
-        }}
-      >
-        <FileManagerPage />
-      </Stack>
-    </>
-  );
-}
-
-const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LayoutWrapper />
-    </ThemeProvider>
-  </React.StrictMode>
-);
