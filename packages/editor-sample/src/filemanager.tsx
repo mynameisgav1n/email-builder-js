@@ -19,6 +19,7 @@ import {
   DialogActions,
   TextField,
   Snackbar,
+  IconButton,
 } from '@mui/material';
 import {
   Upload as UploadIcon,
@@ -55,41 +56,38 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
 }
 
 function FileExplorerPage() {
-  const [path, setPath] = useState<string>('');
+  const [path, setPath] = useState('');
   const [items, setItems] = useState<FileItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
-  const [username, setUsername] = useState<string>('');
-  const [usernameLoading, setUsernameLoading] = useState<boolean>(true);
+  const [username, setUsername] = useState('');
+  const [usernameLoading, setUsernameLoading] = useState(true);
 
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
-  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploading, setUploading] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<FileItem | null>(null);
-  const [renameItem, setRenameItem] = useState<FileItem | null>(null);
-  const [renameValue, setRenameValue] = useState<string>('');
+  const [renameItem, setRenameItem]       = useState<FileItem | null>(null);
+  const [renameValue, setRenameValue]     = useState('');
 
-  const [newFolderDialog, setNewFolderDialog] = useState<boolean>(false);
-  const [newFolderName, setNewFolderName] = useState<string>('');
+  const [newFolderDialog, setNewFolderDialog] = useState(false);
+  const [newFolderName, setNewFolderName]     = useState('');
 
-  const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string>('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl]   = useState('');
 
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({
     open: false,
     msg: '',
   });
 
-  // fetch current username
+  // fetch current user
   useEffect(() => {
     fetch('/api/user.php', { headers: { Accept: 'application/json' } })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(json => setUsername(json.username ?? ''))
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then(json => setUsername(json.username || ''))
       .catch(err => {
-        console.error('User fetch error:', err);
+        console.error(err);
         setSnack({ open: true, msg: 'Failed to load user' });
       })
       .finally(() => setUsernameLoading(false));
@@ -99,17 +97,15 @@ function FileExplorerPage() {
   const fetchList = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`,
-        { headers: { Accept: 'application/json' } }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      const res = await fetch(`/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.error) throw new Error(json.error);
-      if (!Array.isArray(json.items)) throw new Error('Malformed response');
       setItems(json.items);
     } catch (err: any) {
-      console.error('List error:', err);
+      console.error(err);
       setSnack({ open: true, msg: err.message });
     } finally {
       setLoading(false);
@@ -119,7 +115,7 @@ function FileExplorerPage() {
     if (!usernameLoading) fetchList();
   }, [path, usernameLoading]);
 
-  // upload handler (multiple)
+  // upload
   const doUpload = async () => {
     if (!username || filesToUpload.length === 0) return;
     setUploading(true);
@@ -138,14 +134,14 @@ function FileExplorerPage() {
       setFilesToUpload([]);
       fetchList();
     } catch (err: any) {
-      console.error('Upload error:', err);
+      console.error(err);
       setSnack({ open: true, msg: err.message });
     } finally {
       setUploading(false);
     }
   };
 
-  // delete handler
+  // delete
   const doDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -163,12 +159,12 @@ function FileExplorerPage() {
       setConfirmDelete(null);
       fetchList();
     } catch (err: any) {
-      console.error('Delete error:', err);
+      console.error(err);
       setSnack({ open: true, msg: err.message });
     }
   };
 
-  // rename handler
+  // rename
   const doRename = async () => {
     if (!renameItem) return;
     try {
@@ -177,7 +173,7 @@ function FileExplorerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'rename',
-          old: path ? `${path}/${renameItem.name}` : renameItem.name,
+          old:  path ? `${path}/${renameItem.name}` : renameItem.name,
           new: renameValue,
         }),
       });
@@ -187,12 +183,12 @@ function FileExplorerPage() {
       setRenameItem(null);
       fetchList();
     } catch (err: any) {
-      console.error('Rename error:', err);
+      console.error(err);
       setSnack({ open: true, msg: err.message });
     }
   };
 
-  // mkdir handler
+  // mkdir
   const doCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     try {
@@ -212,18 +208,18 @@ function FileExplorerPage() {
       setNewFolderName('');
       fetchList();
     } catch (err: any) {
-      console.error('MkDir error:', err);
+      console.error(err);
       setSnack({ open: true, msg: err.message });
     }
   };
 
-  // split folders/files
+  // group
   const folders = items.filter(i => i.type === 'folder');
-  const files = items.filter(i => i.type === 'file');
+  const files   = items.filter(i => i.type === 'file');
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* File Upload & New Folder */}
+      {/* Upload & New Folder */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <Typography variant="h6">/ {path}</Typography>
         <Button
@@ -238,9 +234,7 @@ function FileExplorerPage() {
             multiple
             type="file"
             accept="image/*"
-            onChange={e =>
-              setFilesToUpload(Array.from(e.target.files || []))
-            }
+            onChange={e => setFilesToUpload(Array.from(e.target.files || []))}
           />
         </Button>
         <Button
@@ -264,148 +258,135 @@ function FileExplorerPage() {
         </Typography>
       )}
 
-      {/* Grid: Folders */}
-      {!loading && folders.length > 0 && (
-        <Typography variant="h6" gutterBottom>
-          Folders
-        </Typography>
-      )}
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <Grid container spacing={2}>
-          {path && (
-            <Grid item xs={3}>
-              <Card
+      {/* Folders */}
+      {folders.length > 0 && <Typography variant="h6">Folders</Typography>}
+      <Grid container spacing={2} mb={4}>
+        {path && (
+          <Grid item xs={3}>
+            <Card
+              onClick={() =>
+                setPath(path.split('/').slice(0, -1).join('/'))
+              }
+              sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
+            >
+              <UpIcon fontSize="large" />
+              <Typography>Up</Typography>
+            </Card>
+          </Grid>
+        )}
+        {folders.map(it => (
+          <Grid item xs={3} key={it.name}>
+            <Card>
+              <CardContent
+                sx={{ cursor: 'pointer', textAlign: 'center' }}
                 onClick={() =>
-                  setPath(path.split('/').slice(0, -1).join('/'))
+                  setPath(path ? `${path}/${it.name}` : it.name)
                 }
-                sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
               >
-                <UpIcon fontSize="large" />
-                <Typography>Up</Typography>
-              </Card>
-            </Grid>
-          )}
-          {folders.map(it => (
-            <Grid item xs={3} key={it.name}>
-              <Card>
-                <CardContent
-                  sx={{ cursor: 'pointer', textAlign: 'center' }}
-                  onClick={() =>
-                    setPath(path ? `${path}/${it.name}` : it.name)
-                  }
-                >
-                  <FolderIcon fontSize="large" />
-                  <Typography noWrap mt={1}>
-                    {it.name}
-                  </Typography>
-                </CardContent>
-                <Box sx={{ p: 1 }}>
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    <Button
-                      size="small"
-                      startIcon={<EditIcon />}
-                      onClick={() => {
-                        setRenameItem(it);
-                        setRenameValue(it.name);
-                      }}
-                    >
-                      Rename
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => setConfirmDelete(it)}
-                    >
-                      Delete
-                    </Button>
-                  </Stack>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {/* Grid: Files */}
-      {!loading && files.length > 0 && (
-        <Typography variant="h6" gutterBottom mt={4}>
-          Files
-        </Typography>
-      )}
-      {loading ? null : (
-        <Grid container spacing={2}>
-          {files.map(it => (
-            <Grid item xs={3} key={it.name}>
-              <Card>
-                <CardContent
-                  sx={{ cursor: 'pointer', textAlign: 'center', p: 1 }}
-                  onClick={() => {
-                    setLightboxUrl(it.url!);
-                    setLightboxOpen(true);
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={it.url}
-                    sx={{
-                      width: '100%',
-                      height: 120,
-                      objectFit: 'cover',
-                      borderRadius: 1,
+                <FolderIcon fontSize="large" />
+                <Typography noWrap mt={1}>
+                  {it.name}
+                </Typography>
+              </CardContent>
+              <Box sx={{ p: 1 }}>
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon />}
+                    onClick={() => {
+                      setRenameItem(it);
+                      setRenameValue(it.name);
                     }}
-                  />
-                  <Typography noWrap mt={1}>
-                    {it.name}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
                   >
-                    {it.username} •{' '}
-                    {new Date(it.creation_date!).toLocaleString()}
-                  </Typography>
-                </CardContent>
-                <Box sx={{ p: 1 }}>
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    <Button
-                      size="small"
-                      startIcon={<LinkIcon />}
-                      onClick={() => {
-                        navigator.clipboard.writeText(it.url || '');
-                        setSnack({ open: true, msg: 'Link copied!' });
-                      }}
-                    >
-                      Copy Link
-                    </Button>
-                    <Button
-                      size="small"
-                      startIcon={<EditIcon />}
-                      onClick={() => {
-                        setRenameItem(it);
-                        setRenameValue(it.name);
-                      }}
-                    >
-                      Rename
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => setConfirmDelete(it)}
-                    >
-                      Delete
-                    </Button>
-                  </Stack>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+                    Rename
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setConfirmDelete(it)}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </Box>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Files */}
+      {files.length > 0 && <Typography variant="h6">Files</Typography>}
+      <Grid container spacing={2}>
+        {files.map(it => (
+          <Grid item xs={3} key={it.name}>
+            <Card>
+              <CardContent
+                sx={{ cursor: 'pointer', textAlign: 'center', p: 1 }}
+                onClick={() => {
+                  setLightboxUrl(it.url!);
+                  setLightboxOpen(true);
+                }}
+              >
+                <Box
+                  component="img"
+                  src={it.url}
+                  sx={{
+                    width: '100%',
+                    height: 120,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                  }}
+                />
+                <Typography noWrap mt={1}>
+                  {it.name}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  {it.username} •{' '}
+                  {new Date(it.creation_date!).toLocaleString()}
+                </Typography>
+              </CardContent>
+              <Box sx={{ p: 1 }}>
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  <Button
+                    size="small"
+                    startIcon={<LinkIcon />}
+                    onClick={() => {
+                      const link = `${window.location.protocol}//${window.location.host}${it.url}`;
+                      navigator.clipboard.writeText(link);
+                      setSnack({ open: true, msg: 'Link copied!' });
+                    }}
+                  >
+                    Copy Link
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon />}
+                    onClick={() => {
+                      setRenameItem(it);
+                      setRenameValue(it.name);
+                    }}
+                  >
+                    Rename
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setConfirmDelete(it)}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </Box>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
       {/* Delete Dialog */}
       <Dialog
@@ -481,14 +462,15 @@ function FileExplorerPage() {
       {/* Lightbox */}
       <Dialog
         open={lightboxOpen}
-        onClose={(e, reason) => {
-          if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
-            setLightboxOpen(false);
-          }
-        }}
+        onClose={() => setLightboxOpen(false)}
         fullScreen
-        BackdropProps={{ sx: { backgroundColor: 'rgba(0,0,0,0.8)' } }}
-        PaperProps={{ sx: { backgroundColor: 'transparent', boxShadow: 'none', m: 0 } }}
+        BackdropProps={{
+          sx: { backgroundColor: 'rgba(0,0,0,0.8)' },
+          onClick: () => setLightboxOpen(false),
+        }}
+        PaperProps={{
+          sx: { pointerEvents: 'none', backgroundColor: 'transparent', boxShadow: 'none', m: 0 },
+        }}
       >
         <Box
           component="img"
@@ -499,6 +481,7 @@ function FileExplorerPage() {
             objectFit: 'contain',
             display: 'block',
             m: 'auto',
+            pointerEvents: 'auto',
           }}
         />
       </Dialog>
