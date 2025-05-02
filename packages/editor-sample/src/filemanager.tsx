@@ -217,20 +217,11 @@ function FileExplorerPage() {
   const folders = items.filter(i => i.type === 'folder');
   const files   = items.filter(i => i.type === 'file');
 
-    return (
+  return (
     <Box sx={{ p: 3 }}>
-      {/* New Heading */}
       <Typography variant="h4" fontWeight={600} mb={2}>
         File Manager
       </Typography>
-
-      {/* Upload & New Folder */}
-      {/* ... rest of UI ... */}
-    </Box>
-  );
-
-  return (
-    <Box sx={{ p: 3 }}>
       {/* Upload & New Folder */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <Typography variant="h6">/ {path}</Typography>
