@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
   Box,
+  Grid,
   Card,
   CardContent,
   Typography,
@@ -79,7 +80,7 @@ function FileExplorerPage() {
       } else {
         setSnack({ open: true, msg: json.error || 'List failed' });
       }
-    } catch (e) {
+    } catch {
       setSnack({ open: true, msg: 'Could not fetch files' });
     } finally {
       setLoading(false);
@@ -220,7 +221,6 @@ function FileExplorerPage() {
                 >
                   <EditIcon fontSize="small" />
                 </IconButton>
-
                 {/* Delete */}
                 <IconButton
                   size="small"
@@ -229,7 +229,6 @@ function FileExplorerPage() {
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>
-
                 {/* Icon + Name */}
                 <CardContent
                   onClick={() => {
@@ -255,7 +254,7 @@ function FileExplorerPage() {
         </Grid>
       )}
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation */}
       <Dialog
         open={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
@@ -275,16 +274,16 @@ function FileExplorerPage() {
       <Dialog
         open={!!renameItem}
         onClose={() => setRenameItem(null)}
-        maxWidth="xs"
         fullWidth
+        maxWidth="xs"
       >
         <DialogTitle>Rename “{renameItem?.name}”</DialogTitle>
         <DialogContent>
           <TextField
+            autoFocus
             fullWidth
-            variant="outlined"
             size="small"
-            label="New name"
+            label="New Name"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
           />
