@@ -13,17 +13,14 @@ import {
   CardContent,
   Typography,
   Snackbar,
-  List,
-  ListItem,
-  ListItemText,
   Box,
 } from '@mui/material';
 import {
   VerticalAlignBottomOutlined,
   VerticalAlignCenterOutlined,
   VerticalAlignTopOutlined,
-  ArrowUpward as UpIcon,
-  Folder as FolderIcon,
+  ArrowUpwardOutlined as UpIcon,
+  FolderOutlined as FolderIcon,
 } from '@mui/icons-material';
 
 import BaseSidebarPanel from './helpers/BaseSidebarPanel';
@@ -47,11 +44,14 @@ type ImageSidebarPanelProps = {
   setData: (v: ImageProps) => void;
 };
 
-export default function ImageSidebarPanel({
-  data,
-  setData,
-}: ImageSidebarPanelProps) {
+export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelProps) {
   const [, setErrors] = useState<Zod.ZodError | null>(null);
+
+  // Snackbar state for errors/messages
+  const [snack, setSnack] = useState<{ open: boolean; msg: string }>({
+    open: false,
+    msg: '',
+  });
 
   // picker state
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -77,16 +77,18 @@ export default function ImageSidebarPanel({
     )
       .then((r) => r.json())
       .then((json) => {
-        if (Array.isArray(json.items)) setDialogItems(json.items);
+        if (Array.isArray(json.items)) {
+          setDialogItems(json.items.filter((i: any) => !/\.html?$/i.test(i.name)));
+        }
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        setSnack({ open: true, msg: 'Failed to load items' });
+      });
   }, [chooserOpen, dialogPath]);
 
-  // Filter out html
   const dialogFolders = dialogItems.filter((i) => i.type === 'folder');
-  const dialogFiles = dialogItems.filter(
-    (i) => i.type === 'file' && !/\.html?$/i.test(i.name)
-  );
+  const dialogFiles = dialogItems.filter((i) => i.type === 'file');
 
   // choose file URL
   const chooseUrl = (item: FileItem) => {
@@ -155,10 +157,7 @@ export default function ImageSidebarPanel({
           label="Alignment"
           defaultValue={data.props?.contentAlignment ?? 'middle'}
           onChange={(contentAlignment) =>
-            updateData({
-              ...data,
-              props: { ...data.props, contentAlignment },
-            })
+            updateData({ ...data, props: { ...data.props, contentAlignment } })
           }
         >
           <ToggleButton value="top">
@@ -254,7 +253,9 @@ export default function ImageSidebarPanel({
                       display="block"
                     >
                       {file.username} •{' '}
-                      {new Date(file.creation_date!).toLocaleString()}
+                      {file.creation_date
+                        ? new Date(file.creation_date).toLocaleString()
+                        : ''}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -271,7 +272,7 @@ export default function ImageSidebarPanel({
 
       {/* Snackbar for errors */}
       <Snackbar
-        open={!!(snack.open)}
+        open={snack.open}
         autoHideDuration={3000}
         onClose={() => setSnack((s) => ({ ...s, open: false }))}
         message={snack.msg}
