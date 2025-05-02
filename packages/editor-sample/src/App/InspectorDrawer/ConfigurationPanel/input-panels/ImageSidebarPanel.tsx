@@ -100,11 +100,11 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
   return (
     <>
       <BaseSidebarPanel title="Image block">
-        {/* Source URL + Choose */}
+        {/* Source URL + Choose (now controlled) */}
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
             label="Source URL"
-            defaultValue={data.props?.url ?? ''}
+            value={data.props?.url ?? ''}
             onChange={(v) => {
               const url = v.trim() || null;
               updateData({ ...data, props: { ...data.props, url } });
@@ -126,12 +126,12 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         {/* Other fields */}
         <TextInput
           label="Alt text"
-          defaultValue={data.props?.alt ?? ''}
+          value={data.props?.alt ?? ''}
           onChange={(alt) => updateData({ ...data, props: { ...data.props, alt } })}
         />
         <TextInput
           label="Click through URL"
-          defaultValue={data.props?.linkHref ?? ''}
+          value={data.props?.linkHref ?? ''}
           onChange={(v) => {
             const linkHref = v.trim() || null;
             updateData({ ...data, props: { ...data.props, linkHref } });
@@ -212,9 +212,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
               <Grid item xs={3} key={f.name}>
                 <Card
                   onClick={() =>
-                    setDialogPath(
-                      dialogPath ? `${dialogPath}/${f.name}` : f.name
-                    )
+                    setDialogPath(dialogPath ? `${dialogPath}/${f.name}` : f.name)
                   }
                   sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
                 >
