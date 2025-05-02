@@ -6,34 +6,33 @@ import {
   DialogContent,
   DialogActions,
   Typography,
-  Backdrop,
-  Box,
 } from '@mui/material';
 
 export default function LogoutButton() {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [showLogoutMessage, setShowLogoutMessage] = useState(false);
 
   const handleLogout = async () => {
-    setShowLogoutMessage(true);
+    setConfirmOpen(false); // Close dialog first
+    alert("You've been logged out!"); // Show alert
 
-    // Wait a moment so user can see the message
-    setTimeout(async () => {
-      await fetch('/api/protected-test.php', {
-        method: 'GET',
-        headers: {
-          Authorization: 'Basic ' + btoa('logout:logout'), // force browser to forget credentials
-        },
-      });
+    await fetch('/api/protected-test.php', {
+      method: 'GET',
+      headers: {
+        Authorization: 'Basic ' + btoa('logout:logout'),
+      },
+    });
 
-      // Optional: reload the page to prompt login again
-      window.location.reload();
-    }, 1500); // 1.5 seconds to display message
+    window.location.reload(); // Optional: reload to prompt login
   };
 
   return (
     <>
-      <Button size="small" onClick={() => setConfirmOpen(true)}>
+      <Button
+        size="small"
+        color="error"
+        variant="contained" // or "outlined" if you prefer a border only
+        onClick={() => setConfirmOpen(true)}
+      >
         Log Out
       </Button>
 
@@ -49,17 +48,6 @@ export default function LogoutButton() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Backdrop
-        open={showLogoutMessage}
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
-      >
-        <Box textAlign="center">
-          <Typography variant="h5" fontWeight="bold">
-            You’ve been logged out!
-          </Typography>
-        </Box>
-      </Backdrop>
     </>
   );
 }
