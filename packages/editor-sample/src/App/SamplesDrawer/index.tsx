@@ -147,9 +147,11 @@ export default function SamplesDrawer() {
             <Button size="small" href="/email-builder-js/templates.html">
               All Templates
             </Button>
-            <Button size="small" href="/email-builder-js/myemails.html">
-              My Emails
-            </Button>
+            <Typography variant="subtitle2" gutterBottom>
+              Upload images here to use in emails. Once uploaded, click <strong>Copy Link</strong> to get the image URL.
+              <br />
+              <strong>Note:</strong> These files are publicly accessible and do not require a password to view. Please be cautious in what you upload.
+            </Typography>
             <Button size="small" href="/email-builder-js/filemanager.html">
               File Manager
             </Button>
