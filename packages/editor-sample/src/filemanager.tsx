@@ -419,9 +419,10 @@ function FileExplorerPage() {
         maxWidth="xs"
       >
         <DialogTitle>Rename “{renameItem?.name}”</DialogTitle>
-        <DialogContent sx={{ pt: 8 }}>
+        <DialogContent dividers sx={{ pt: 8 }}>
           <TextField
             autoFocus
+            margin="normal"
             fullWidth
             size="small"
             label="New Name"
@@ -448,9 +449,10 @@ function FileExplorerPage() {
         maxWidth="xs"
       >
         <DialogTitle>New Folder</DialogTitle>
-        <DialogContent sx={{ pt: 8 }}>
+        <DialogContent dividers sx={{ pt: 8 }}>
           <TextField
             autoFocus
+            margin="normal"
             fullWidth
             size="small"
             label="Folder Name"
