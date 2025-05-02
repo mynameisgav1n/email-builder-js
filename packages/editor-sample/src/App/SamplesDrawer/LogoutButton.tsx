@@ -1,45 +1,41 @@
 import React, { useState } from 'react';
 import {
-  ListItem,
-  ListItemText,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Snackbar,
-  Typography
+  Typography,
+  Backdrop,
+  Box,
 } from '@mui/material';
 
-export default function LogoutLink() {
+export default function LogoutButton() {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [showLogoutMessage, setShowLogoutMessage] = useState(false);
 
-  const triggerLogout = async () => {
-    // Overwrite saved credentials with bogus ones
-    await fetch('/api/protected-test.php', {
-      method: 'GET',
-      headers: {
-        Authorization: 'Basic ' + btoa('logout:logout'),
-      },
-    });
-    setSnackbarOpen(true);
-  };
+  const handleLogout = async () => {
+    setShowLogoutMessage(true);
 
-  const handleLogoutClick = () => {
-    setConfirmOpen(true);
-  };
+    // Wait a moment so user can see the message
+    setTimeout(async () => {
+      await fetch('/api/protected-test.php', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Basic ' + btoa('logout:logout'), // force browser to forget credentials
+        },
+      });
 
-  const handleConfirm = () => {
-    setConfirmOpen(false);
-    triggerLogout();
+      // Optional: reload the page to prompt login again
+      window.location.reload();
+    }, 1500); // 1.5 seconds to display message
   };
 
   return (
     <>
-      <ListItem button onClick={handleLogoutClick}>
-        <ListItemText primary="Log Out" />
-      </ListItem>
+      <Button size="small" onClick={() => setConfirmOpen(true)}>
+        Log Out
+      </Button>
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Logout</DialogTitle>
@@ -48,18 +44,22 @@ export default function LogoutLink() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} color="error" variant="contained">
+          <Button onClick={handleLogout} color="error" variant="contained">
             Log Out
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
-        message="You've been logged out!"
-      />
+      <Backdrop
+        open={showLogoutMessage}
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+      >
+        <Box textAlign="center">
+          <Typography variant="h5" fontWeight="bold">
+            You’ve been logged out!
+          </Typography>
+        </Box>
+      </Backdrop>
     </>
   );
 }
