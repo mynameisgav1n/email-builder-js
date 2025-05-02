@@ -72,7 +72,7 @@ function FileExplorerPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `filemanager.php?action=list&path=${encodeURIComponent(path)}`
+        `/api/filemanager.php?action=list&path=${encodeURIComponent(path)}`
       );
       const json = await res.json();
       if (!json.error && Array.isArray(json.items)) {
@@ -102,7 +102,10 @@ function FileExplorerPage() {
     fd.append('file', fileToUpload);
 
     try {
-      const res = await fetch('filemanager.php', { method: 'POST', body: fd });
+      const res = await fetch('/api/filemanager.php', {
+        method: 'POST',
+        body: fd,
+      });
       const j = await res.json();
       if (j.success) {
         setSnack({ open: true, msg: 'Uploaded!' });
@@ -124,7 +127,9 @@ function FileExplorerPage() {
     const target = path + '/' + confirmDelete.name;
     try {
       const res = await fetch(
-        `filemanager.php?action=delete&path=${encodeURIComponent(target)}`
+        `/api/filemanager.php?action=delete&path=${encodeURIComponent(
+          target
+        )}`
       );
       const j = await res.json();
       if (j.success) {
@@ -148,7 +153,10 @@ function FileExplorerPage() {
     fd.append('newName', renameValue);
 
     try {
-      const res = await fetch('filemanager.php', { method: 'POST', body: fd });
+      const res = await fetch('/api/filemanager.php', {
+        method: 'POST',
+        body: fd,
+      });
       const j = await res.json();
       if (j.success) {
         setSnack({ open: true, msg: 'Renamed!' });
@@ -221,6 +229,7 @@ function FileExplorerPage() {
                 >
                   <EditIcon fontSize="small" />
                 </IconButton>
+
                 {/* Delete */}
                 <IconButton
                   size="small"
@@ -229,6 +238,7 @@ function FileExplorerPage() {
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>
+
                 {/* Icon + Name */}
                 <CardContent
                   onClick={() => {
@@ -291,7 +301,9 @@ function FileExplorerPage() {
         <DialogActions>
           <Button onClick={() => setRenameItem(null)}>Cancel</Button>
           <Button
-            disabled={!renameValue.trim() || renameValue === renameItem?.name}
+            disabled={
+              !renameValue.trim() || renameValue === renameItem?.name
+            }
             onClick={doRename}
           >
             Save
@@ -320,7 +332,9 @@ function LayoutWrapper() {
       <SamplesDrawer />
       <Stack
         sx={{
-          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
+          marginLeft: samplesOpen
+            ? `${SAMPLES_DRAWER_WIDTH}px`
+            : 0,
           transition: ml,
         }}
       >
@@ -330,7 +344,9 @@ function LayoutWrapper() {
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root')!);
+const root = ReactDOM.createRoot(
+  document.getElementById('root')!
+);
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
