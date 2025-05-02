@@ -34,6 +34,7 @@ import ShareButton from './ShareButton';
 import ShortenButton from './ShortenButton';
 import SaveButton from './SaveButton';
 import SendButton from './SendButton';
+import LogoutButton from './LogoutButton';
 
 export default function TemplatePanel() {
   const document = useDocument();
@@ -141,6 +142,7 @@ export default function TemplatePanel() {
                 </Tooltip>
               </ToggleButton>
             </ToggleButtonGroup>
+            <LogoutButton />
             <ShareButton />
             <ShortenButton />
             <SaveButton />
