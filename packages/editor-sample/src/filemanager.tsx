@@ -1,210 +1,166 @@
 import React, { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom/client';
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Link,
-  Stack,
-  CircularProgress,
-  CssBaseline,
-  ThemeProvider,
-  useTheme,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Snackbar,
+  Box, Typography, Button, Snackbar, TextField, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Card, CardContent, Stack, CircularProgress, Tooltip
 } from '@mui/material';
+import {
+  Delete, Edit, FileCopy, Folder, InsertDriveFile, Image
+} from '@mui/icons-material';
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 
-import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
-import SamplesDrawer from './App/SamplesDrawer';
-import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
-import theme from './theme';
-
-interface SavedEmail {
-  id: number;
-  short_link: string;
-  title: string;
-  created_at: string;
-  public: number;
+interface FileItem {
+  name: string;
+  type: 'file' | 'folder';
+  url?: string;
+  username?: string;
+  creation_date?: string;
 }
 
-function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
-  const { transitions } = useTheme();
-  return transitions.create(cssProp, {
-    easing: !open ? transitions.easing.sharp : transitions.easing.easeOut,
-    duration: !open ? transitions.duration.leavingScreen : transitions.duration.enteringScreen,
-  });
-}
-
-function MyEmailsPage() {
-  const [emails, setEmails] = useState<SavedEmail[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [renameDialog, setRenameDialog] = useState<null | SavedEmail>(null);
-  const [renameTitle, setRenameTitle] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState<null | string>(null);
-  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
-  const [confirmTogglePublic, setConfirmTogglePublic] = useState<null | SavedEmail>(null);
+const FileManager = () => {
+  const [items, setItems] = useState<FileItem[]>([]);
+  const [path, setPath] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [folderName, setFolderName] = useState('');
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
+  const [renameNew, setRenameNew] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState<string>('');
 
   useEffect(() => {
-    fetch('/api/list-emails.php')
-      .then((res) => res.json())
-      .then((data) => {
-        setEmails(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load emails:', err);
-        setLoading(false);
-      });
+    fetch('/api/user.php')
+      .then(res => res.json())
+      .then(data => setUsername(data.username || ''))
+      .catch(() => setUsername(''));
   }, []);
 
-  const handleDelete = async (shortLink: string) => {
-    try {
-      const res = await fetch('/api/delete-email.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ short_link: shortLink }),
-      });
-
-      if (!res.ok) throw new Error('Delete failed');
-      setEmails((prev) => prev.filter((e) => e.short_link !== shortLink));
-      setMessage('Email deleted.');
-    } catch (err) {
-      console.error('Delete error:', err);
-      setMessage('Failed to delete email.');
-    }
+  const fetchFiles = async () => {
+    setLoading(true);
+    const res = await fetch(`/filemanager.php?action=list&path=${encodeURIComponent(path)}`);
+    const data = await res.json();
+    setItems(data.items || []);
+    setLoading(false);
   };
 
-  const handleDeleteAll = async () => {
-    try {
-      const res = await fetch('/api/delete-all-emails.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+  useEffect(() => {
+    fetchFiles();
+  }, [path]);
 
-      if (!res.ok) throw new Error('Delete all failed');
-      setEmails([]);
-      setMessage('All saved emails deleted.');
-    } catch (err) {
-      console.error('Delete all error:', err);
-      setMessage('Failed to delete all emails.');
-    }
+  const upload = async () => {
+    if (!file || !username) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('username', username);
+
+    const res = await fetch(`/filemanager.php?action=upload&path=${encodeURIComponent(path)}`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    setMessage(data.success ? 'Upload successful' : data.error || 'Upload failed');
+    setFile(null);
+    fetchFiles();
   };
 
-  const handleRename = async () => {
-    try {
-      const res = await fetch('/api/rename-email.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ short_link: renameDialog?.short_link, title: renameTitle }),
-      });
-
-      if (!res.ok) throw new Error('Rename failed');
-
-      setEmails((prev) =>
-        prev.map((e) =>
-          e.short_link === renameDialog?.short_link ? { ...e, title: renameTitle } : e
-        )
-      );
-      setMessage('Email renamed.');
-      setRenameDialog(null);
-    } catch (err) {
-      console.error('Rename error:', err);
-      setMessage('Failed to rename email.');
-    }
+  const deleteItem = async (name: string) => {
+    if (!window.confirm(`Delete ${name}?`)) return;
+    const res = await fetch(`/filemanager.php?action=delete`, {
+      method: 'POST',
+      body: new URLSearchParams({ name: `${path}/${name}` }),
+    });
+    const data = await res.json();
+    setMessage(data.success ? 'Deleted' : data.error);
+    fetchFiles();
   };
 
-  const handleTogglePublic = async (email: SavedEmail) => {
-    const updatedPublic = email.public === 1 ? 0 : 1;
-    try {
-      const res = await fetch('/api/toggle-public.php', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ short_link: email.short_link, public: updatedPublic }),
-      });
+  const renameItem = async () => {
+    if (!renameTarget || !renameNew) return;
+    const res = await fetch(`/filemanager.php?action=rename`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        old: `${path}/${renameTarget}`,
+        new: renameNew,
+      }),
+    });
+    const data = await res.json();
+    setRenameTarget(null);
+    setRenameNew('');
+    setMessage(data.success ? 'Renamed' : data.error);
+    fetchFiles();
+  };
 
-      if (!res.ok) throw new Error('Failed to toggle public status');
+  const createFolder = async () => {
+    if (!folderName) return;
+    const res = await fetch(`/filemanager.php?action=mkdir`, {
+      method: 'POST',
+      body: new URLSearchParams({ path, name: folderName }),
+    });
+    const data = await res.json();
+    setFolderName('');
+    setMessage(data.success ? 'Folder created' : data.error);
+    fetchFiles();
+  };
 
-      setEmails((prev) =>
-        prev.map((e) =>
-          e.short_link === email.short_link ? { ...e, public: updatedPublic } : e
-        )
-      );
-      setMessage(`Email marked as ${updatedPublic ? 'public' : 'private'}.`);
-    } catch (err) {
-      console.error(err);
-      setMessage('Failed to update visibility.');
-    }
+  const copyLink = (url: string) => {
+    navigator.clipboard.writeText(`${location.origin}${url}`);
+    setMessage('Link copied!');
   };
 
   return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h5" fontWeight={600} mb={2}>
-        My Saved Emails
-      </Typography>
+    <Box p={4}>
+      <Typography variant="h4" gutterBottom>Public File Manager</Typography>
 
-      {emails.length > 0 && (
-        <Button
-          variant="outlined"
-          color="error"
+      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+        <TextField
           size="small"
-          onClick={() => setConfirmDeleteAll(true)}
-          sx={{ mb: 2 }}
-        >
-          Delete All
-        </Button>
-      )}
+          label="New Folder"
+          value={folderName}
+          onChange={(e) => setFolderName(e.target.value)}
+        />
+        <Button onClick={createFolder} variant="outlined">Create Folder</Button>
+        <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        <Button onClick={upload} variant="contained" disabled={!file || !username}>Upload Image</Button>
+      </Stack>
 
-      {loading ? (
-        <CircularProgress />
-      ) : emails.length === 0 ? (
-        <Typography>No saved emails found.</Typography>
-      ) : (
+      {loading ? <CircularProgress /> : (
         <Stack spacing={2}>
-          {emails.map((email) => (
-            <Card key={email.id} variant="outlined">
+          {items.map(item => (
+            <Card key={item.name} variant="outlined">
               <CardContent>
-                <Typography variant="h6">{email.title}</Typography>
-                <Typography variant="body2" color="text.secondary" mb={1}>
-                  Saved on {new Date(email.created_at).toLocaleString()}
-                </Typography>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Link
-                    href={`/${email.short_link}`}
-                    target="_blank"
-                    rel="noopener"
-                    underline="hover"
-                  >
-                    View Email
-                  </Link>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setRenameDialog(email);
-                      setRenameTitle(email.title);
-                    }}
-                  >
-                    Rename
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => setConfirmDelete(email.short_link)}
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => setConfirmTogglePublic(email)}
-                  >
-                    {email.public ? 'Make Private' : 'Make Public'}
-                  </Button>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    {item.type === 'folder' ? <Folder /> : (
+                      item.url?.match(/\.(jpe?g|png|gif|webp)$/i) ? <Image /> : <InsertDriveFile />
+                    )}
+                    <Typography
+                      variant="body1"
+                      sx={{ cursor: item.type === 'file' && item.url ? 'pointer' : 'default' }}
+                      onClick={() => item.url && item.url.match(/\.(jpe?g|png|gif|webp)$/i) && setLightboxUrl(item.url)}
+                    >
+                      {item.name}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {item.username && (
+                      <Typography variant="caption" sx={{ color: '#555' }}>
+                        uploaded by {item.username} on {new Date(item.creation_date!).toLocaleString()}
+                      </Typography>
+                    )}
+                    {item.url && (
+                      <Tooltip title="Copy link">
+                        <IconButton onClick={() => copyLink(item.url)}><FileCopy /></IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Rename">
+                      <IconButton onClick={() => { setRenameTarget(item.name); setRenameNew(item.name); }}><Edit /></IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton onClick={() => deleteItem(item.name)}><Delete /></IconButton>
+                    </Tooltip>
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>
@@ -212,120 +168,38 @@ function MyEmailsPage() {
         </Stack>
       )}
 
-      {/* Rename Dialog */}
-      <Dialog open={!!renameDialog} onClose={() => setRenameDialog(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Rename Email</DialogTitle>
+      <Dialog open={!!renameTarget} onClose={() => setRenameTarget(null)}>
+        <DialogTitle>Rename "{renameTarget}"</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <TextField
-              autoFocus
-              fullWidth
-              label="New Title"
-              value={renameTitle}
-              onChange={(e) => setRenameTitle(e.target.value)}
-              variant="outlined"
-              size="small"
-            />
-          </Box>
+          <TextField
+            label="New name"
+            fullWidth
+            value={renameNew}
+            onChange={(e) => setRenameNew(e.target.value)}
+          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRenameDialog(null)}>Cancel</Button>
-          <Button onClick={handleRename} disabled={!renameTitle.trim()}>
-            Save
-          </Button>
+          <Button onClick={() => setRenameTarget(null)}>Cancel</Button>
+          <Button onClick={renameItem} variant="contained">Rename</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Confirm Delete Dialog */}
-      <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete this saved email?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
-          <Button color="error" onClick={() => {
-            handleDelete(confirmDelete!);
-            setConfirmDelete(null);
-          }}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Confirm Delete All Dialog */}
-      <Dialog open={confirmDeleteAll} onClose={() => setConfirmDeleteAll(false)}>
-        <DialogTitle>Confirm Delete All</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete <strong>all</strong> your saved emails? This cannot be undone.
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteAll(false)}>Cancel</Button>
-          <Button color="error" onClick={() => {
-            handleDeleteAll();
-            setConfirmDeleteAll(false);
-          }}>
-            Delete All
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Confirm Toggle Public Dialog */}
-      <Dialog open={!!confirmTogglePublic} onClose={() => setConfirmTogglePublic(null)}>
-        <DialogTitle>
-          {confirmTogglePublic?.public ? 'Make Private?' : 'Make Public?'}
-        </DialogTitle>
-        <DialogContent>
-          Are you sure you want to mark this email as{' '}
-          <strong>{confirmTogglePublic?.public ? 'private' : 'public'}</strong>?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmTogglePublic(null)}>Cancel</Button>
-          <Button onClick={() => {
-            handleTogglePublic(confirmTogglePublic!);
-            setConfirmTogglePublic(null);
-          }}>
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {lightboxUrl && (
+        <Lightbox
+          open
+          close={() => setLightboxUrl(null)}
+          slides={[{ src: lightboxUrl }]}
+        />
+      )}
 
       <Snackbar
         open={!!message}
-        autoHideDuration={4000}
+        autoHideDuration={3000}
         onClose={() => setMessage(null)}
         message={message}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       />
     </Box>
   );
-}
+};
 
-function LayoutWrapper() {
-  const samplesOpen = useSamplesDrawerOpen();
-  const mlTransition = useDrawerTransition('margin-left', samplesOpen);
-
-  return (
-    <>
-      <SamplesDrawer />
-      <Stack
-        sx={{
-          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          transition: mlTransition,
-        }}
-      >
-        <MyEmailsPage />
-      </Stack>
-    </>
-  );
-}
-
-const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LayoutWrapper />
-    </ThemeProvider>
-  </React.StrictMode>
-);
+export default FileManager;
