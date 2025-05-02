@@ -8,10 +8,6 @@ import { Delete, Edit, FileCopy, Folder, InsertDriveFile, Image } from '@mui/ico
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 
-export default function FileManagrer() {
-  return <h1 style={{ padding: 100 }}>Hello from FileManager</h1>;
-}
-
 interface FileItem {
   name: string;
   type: 'file' | 'folder';
@@ -21,6 +17,7 @@ interface FileItem {
 }
 
 export default function FileManager() {
+  return <h1 style={{ padding: 100 }}>Hello from FileManager</h1>;
   const [items, setItems] = useState<FileItem[]>([]);
   const [path, setPath] = useState('');
   const [file, setFile] = useState<File | null>(null);
