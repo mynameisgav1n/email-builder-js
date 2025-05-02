@@ -405,6 +405,13 @@ function FileExplorerPage() {
         maxWidth="xs"
       >
         <DialogTitle>Delete “{confirmDelete?.name}”?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {confirmDelete?.type === 'folder'
+              ? 'Are you sure you want to delete this folder? All contents inside this folder will be permanently deleted.'
+              : 'Are you sure you want to delete this file? This action cannot be undone.'}
+          </Typography>
+        </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDelete(null)}>Cancel</Button>
           <Button color="error" onClick={doDelete}>
