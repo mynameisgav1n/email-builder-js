@@ -177,7 +177,6 @@ function MyEmailsPage() {
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Link
                     href={`/${email.short_link}`}
-                    target="_blank"
                     rel="noopener"
                     underline="hover"
                   >
