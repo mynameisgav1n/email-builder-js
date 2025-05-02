@@ -224,7 +224,7 @@ function FileExplorerPage() {
       </Typography>
       <Typography variant="subtitle2" gutterBottom>
         Upload images here to use in emails. Once uploaded, click <strong>Copy Link</strong> to get the image URL.<br />
-        <strong>Note:</strong> These files are publicly accessible and do not require a password to view. Please be cautious in what you upload.
+        <strong>Note:</strong> These files are publicly accessible and do not require a password to view. Please be cautious in what you upload.<br />
       </Typography>
       {/* Upload & New Folder */}
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
