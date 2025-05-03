@@ -27,6 +27,25 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
   });
 }
 
+function LayoutWrapper({ children }: { children?: React.ReactNode }) {
+  const samplesOpen = useSamplesDrawerOpen();
+  const ml = useDrawerTransition('margin-left', samplesOpen);
+
+  return (
+    <>
+      <SamplesDrawer />
+      <Stack
+        sx={{
+          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
+          transition: ml,
+        }}
+      >
+        {children}
+      </Stack>
+    </>
+  );
+}
+
 function UserAdminPage() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +110,7 @@ function UserAdminPage() {
       if (!json.success) throw new Error(json.error || 'Create failed');
       setResultDialog({ type: 'create', username: value, password: json.password });
       setValue('');
+      setGenerated('');
       setNewUserDialog(false);
       fetchUsers();
     } catch (err: any) {
@@ -111,6 +131,7 @@ function UserAdminPage() {
       setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password || value });
       setPasswordDialog(null);
       setValue('');
+      setGenerated('');
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
     }
@@ -151,205 +172,111 @@ function UserAdminPage() {
   };
 
   if (unauthorized) {
+    return (
+      <LayoutWrapper>
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+          <Box sx={{ maxWidth: 450, textAlign: 'center', backgroundColor: '#fff', p: 4, borderRadius: 2, boxShadow: 3 }}>
+            <Box sx={{ fontSize: 64, color: '#e53935', mb: 2 }}>
+              ❌
+            </Box>
+            <Typography variant="h4" color="error" gutterBottom>
+              Access Denied
+            </Typography>
+            <Typography>You do not have permission to view this page.</Typography>
+          </Box>
+        </Box>
+      </LayoutWrapper>
+    );
+  }
+
   return (
     <LayoutWrapper>
-      <Box
-        sx={{
-          height: 'calc(100vh - 64px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#fafafa',
-          padding: 2,
-        }}
-      >
-        <Box
-          component="iframe"
-          src="/publicfiles/403.html"
-          sx={{
-            width: '100%',
-            maxWidth: 800,
-            height: '80vh',
-            border: 'none',
-            borderRadius: 2,
-            boxShadow: 3,
-            backgroundColor: '#fff',
-          }}
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h5" fontWeight={600} mb={2}>
+          .htpasswd User Manager
+        </Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => { setNewUserDialog(true); setValue(''); setGenerated(''); }}>
+          Create New User
+        </Button>
+
+        {loading ? (
+          <CircularProgress sx={{ mt: 4 }} />
+        ) : (
+          <TableContainer component={Paper} sx={{ mt: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Username</TableCell>
+                  <TableCell>Last Online</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map(user => (
+                  <TableRow key={user.username}>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.last_online || 'N/A'}</TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button size="small" onClick={() => { setPasswordDialog(user); setValue(''); setGenerated(''); }}>Password</Button>
+                        <Button size="small" onClick={() => { setRenameDialog(user); setValue(user.username); }}>Rename</Button>
+                        <Button size="small" color="error" onClick={() => setConfirmDeleteUser(user.username)}>Delete</Button>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        {/* Confirm Delete Dialog */}
+        <Dialog open={!!confirmDeleteUser} onClose={() => setConfirmDeleteUser(null)}>
+          <DialogTitle>Delete User</DialogTitle>
+          <DialogContent>
+            Are you sure you want to delete user "{confirmDeleteUser}"? This won't delete their saved emails.
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDeleteUser(null)}>Cancel</Button>
+            <Button color="error" onClick={handleDelete}>Delete</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Result Dialog */}
+        <Dialog open={!!resultDialog} onClose={() => setResultDialog(null)}>
+          <DialogTitle>
+            {resultDialog?.type === 'create' ? 'New User Created' : `Password Reset for "${resultDialog?.username}"`}
+          </DialogTitle>
+          <DialogContent>
+            {resultDialog?.type === 'create' && (
+              <>
+                <Typography variant="subtitle2">Username:</Typography>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <code style={{ backgroundColor: '#eee', padding: '4px 8px', borderRadius: 4 }}>{resultDialog.username}</code>
+                  <IconButton onClick={() => handleCopy(resultDialog.username)}><ContentCopy fontSize="small" /></IconButton>
+                </Box>
+              </>
+            )}
+            <Typography variant="subtitle2">Password:</Typography>
+            <Box display="flex" alignItems="center">
+              <code style={{ backgroundColor: '#eee', padding: '4px 8px', borderRadius: 4 }}>{resultDialog?.password}</code>
+              <IconButton onClick={() => handleCopy(resultDialog!.password)}><ContentCopy fontSize="small" /></IconButton>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setResultDialog(null)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={snack.open}
+          autoHideDuration={4000}
+          onClose={() => setSnack(s => ({ ...s, open: false }))}
+          message={snack.msg}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
       </Box>
     </LayoutWrapper>
-  );
-}
-
-
-  return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h5" fontWeight={600} mb={2}>
-        .htpasswd User Manager
-      </Typography>
-
-      <Button variant="contained" startIcon={<Add />} onClick={() => { setNewUserDialog(true); setValue(''); }}>
-        Create New User
-      </Button>
-
-      {loading ? (
-        <CircularProgress sx={{ mt: 4 }} />
-      ) : (
-        <TableContainer component={Paper} sx={{ mt: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Username</TableCell>
-                <TableCell>Last Online</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map(user => (
-                <TableRow key={user.username}>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell>{user.last_online || 'N/A'}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" onClick={() => { setPasswordDialog(user); setValue(''); setGenerated(''); }}>Password</Button>
-                      <Button size="small" onClick={() => { setRenameDialog(user); setValue(user.username); }}>Rename</Button>
-                      <Button size="small" color="error" onClick={() => setConfirmDeleteUser(user.username)}>Delete</Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      {/* Confirm Delete Dialog */}
-      <Dialog open={!!confirmDeleteUser} onClose={() => setConfirmDeleteUser(null)}>
-        <DialogTitle>Delete User</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete user "{confirmDeleteUser}"? This won't delete their saved emails.
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteUser(null)}>Cancel</Button>
-          <Button color="error" onClick={handleDelete}>Delete</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* New User Dialog */}
-      <Dialog open={newUserDialog} onClose={() => { setNewUserDialog(false); setValue(''); }}>
-        <DialogTitle>Create New User</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            label="Username"
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            fullWidth
-            size="small"
-            margin="normal"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setNewUserDialog(false); setValue(''); }}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={!value.trim()}>Create</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Password Reset Dialog */}
-      <Dialog open={!!passwordDialog} onClose={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>
-        <DialogTitle>Set Password for {passwordDialog?.username}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            label="New Password"
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            fullWidth
-            size="small"
-            margin="normal"
-            type="text"
-          />
-          <Button onClick={generateRandomPassword} sx={{ mt: 1 }}>Generate Password</Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>Cancel</Button>
-          <Button onClick={handlePasswordChange} disabled={!value}>Save</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Rename Dialog */}
-      <Dialog open={!!renameDialog} onClose={() => { setRenameDialog(null); setValue(''); }}>
-        <DialogTitle>Rename User {renameDialog?.username}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            label="New Username"
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            fullWidth
-            size="small"
-            margin="normal"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setRenameDialog(null); setValue(''); }}>Cancel</Button>
-          <Button onClick={handleRename} disabled={!value.trim() || value === renameDialog?.username}>Rename</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Result Dialog */}
-      <Dialog open={!!resultDialog} onClose={() => setResultDialog(null)}>
-        <DialogTitle>
-          {resultDialog?.type === 'create' ? 'New User Created' : `Password Reset for "${resultDialog?.username}"`}
-        </DialogTitle>
-        <DialogContent>
-          {resultDialog?.type === 'create' && (
-            <>
-              <Typography variant="subtitle2">Username:</Typography>
-              <Stack direction="row" alignItems="center">
-                <Box component="code" sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>{resultDialog.username}</Box>
-                <IconButton onClick={() => handleCopy(resultDialog.username)}><ContentCopy fontSize="small" /></IconButton>
-              </Stack>
-            </>
-          )}
-          <Typography variant="subtitle2" mt={2}>Password:</Typography>
-          <Stack direction="row" alignItems="center">
-            <Box component="code" sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>{resultDialog?.password}</Box>
-            <IconButton onClick={() => handleCopy(resultDialog!.password)}><ContentCopy fontSize="small" /></IconButton>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setResultDialog(null)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={() => setSnack(s => ({ ...s, open: false }))}
-        message={snack.msg}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
-    </Box>
-  );
-}
-
-function LayoutWrapper({ children }: { children?: React.ReactNode }) {
-  const samplesOpen = useSamplesDrawerOpen();
-  const ml = useDrawerTransition('margin-left', samplesOpen);
-
-  return (
-    <>
-      <SamplesDrawer />
-      <Stack
-        sx={{
-          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          transition: ml,
-        }}
-      >
-        {children}
-      </Stack>
-    </>
   );
 }
 
@@ -358,9 +285,7 @@ root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LayoutWrapper>
-        <UserAdminPage />
-      </LayoutWrapper>
+      <UserAdminPage />
     </ThemeProvider>
   </React.StrictMode>
 );
