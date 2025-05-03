@@ -1,19 +1,32 @@
-// useradmin.tsx — working standalone React panel with mounting
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
   Box, Typography, Button, Stack, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Snackbar, CircularProgress,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+  CssBaseline, useTheme
 } from '@mui/material';
-import { Delete, Edit, Add } from '@mui/icons-material';
+import { Add } from '@mui/icons-material';
+
+import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
+import SamplesDrawer from './App/SamplesDrawer';
+import { useSamplesDrawerOpen } from './documents/editor/EditorContext';
+import theme from './theme';
 
 interface HtpasswdUser {
   username: string;
   last_online?: string;
 }
 
-function UserAdminApp() {
+function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
+  const { transitions } = useTheme();
+  return transitions.create(cssProp, {
+    easing: !open ? transitions.easing.sharp : transitions.easing.easeOut,
+    duration: !open ? transitions.duration.leavingScreen : transitions.duration.enteringScreen,
+  });
+}
+
+function UserAdminPage() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({ open: false, msg: '' });
@@ -112,10 +125,11 @@ function UserAdminApp() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" fontWeight={600} gutterBottom>
+    <Box sx={{ padding: 3 }}>
+      <Typography variant="h5" fontWeight={600} mb={2}>
         .htpasswd User Manager
       </Typography>
+
       <Button variant="contained" startIcon={<Add />} onClick={() => setNewUserDialog(true)}>
         Create New User
       </Button>
@@ -221,5 +235,31 @@ function UserAdminApp() {
   );
 }
 
+function LayoutWrapper() {
+  const samplesOpen = useSamplesDrawerOpen();
+  const ml = useDrawerTransition('margin-left', samplesOpen);
+
+  return (
+    <>
+      <SamplesDrawer />
+      <Stack
+        sx={{
+          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
+          transition: ml,
+        }}
+      >
+        <UserAdminPage />
+      </Stack>
+    </>
+  );
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<React.StrictMode><UserAdminApp /></React.StrictMode>);
+root.render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <LayoutWrapper />
+    </ThemeProvider>
+  </React.StrictMode>
+);
