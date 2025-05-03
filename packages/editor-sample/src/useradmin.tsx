@@ -4,9 +4,9 @@ import {
   Box, Typography, Button, Stack, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Snackbar, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  CssBaseline, useTheme
+  CssBaseline, useTheme, IconButton
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, ContentCopy } from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
 
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
@@ -27,6 +27,10 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
   });
 }
 
+function copyToClipboard(text: string) {
+  navigator.clipboard.writeText(text);
+}
+
 function UserAdminPage() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +40,9 @@ function UserAdminPage() {
   const [renameDialog, setRenameDialog] = useState<HtpasswdUser | null>(null);
   const [passwordDialog, setPasswordDialog] = useState<HtpasswdUser | null>(null);
   const [value, setValue] = useState('');
+  const [generated, setGenerated] = useState<string>('');
+
+  const [resultDialog, setResultDialog] = useState<null | { type: 'create' | 'reset'; username: string; password: string }>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -79,9 +86,9 @@ function UserAdminPage() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Create failed');
-      setSnack({ open: true, msg: `User created. Password: ${json.password}` });
       setValue('');
       setNewUserDialog(false);
+      setResultDialog({ type: 'create', username: value, password: json.password });
       fetchUsers();
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
@@ -98,9 +105,9 @@ function UserAdminPage() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Password update failed');
-      setSnack({ open: true, msg: 'Password updated' });
       setPasswordDialog(null);
       setValue('');
+      setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password });
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
     }
@@ -123,6 +130,16 @@ function UserAdminPage() {
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
     }
+  };
+
+  const generateRandomPassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setValue(result);
+    setGenerated(result);
   };
 
   return (
@@ -154,7 +171,7 @@ function UserAdminPage() {
                   <TableCell>{user.last_online || 'N/A'}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" onClick={() => { setPasswordDialog(user); setValue(''); }}>Password</Button>
+                      <Button size="small" onClick={() => { setPasswordDialog(user); setValue(''); setGenerated(''); }}>Password</Button>
                       <Button size="small" onClick={() => { setRenameDialog(user); setValue(user.username); }}>Rename</Button>
                       <Button size="small" color="error" onClick={() => handleDelete(user.username)}>Delete</Button>
                     </Stack>
@@ -197,8 +214,9 @@ function UserAdminPage() {
             fullWidth
             size="small"
             margin="normal"
-            type="password"
+            type="text"
           />
+          <Button onClick={generateRandomPassword} sx={{ mt: 1 }}>Generate Password</Button>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPasswordDialog(null)}>Cancel</Button>
@@ -222,6 +240,31 @@ function UserAdminPage() {
         <DialogActions>
           <Button onClick={() => setRenameDialog(null)}>Cancel</Button>
           <Button onClick={handleRename} disabled={!value.trim() || value === renameDialog?.username}>Rename</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!resultDialog} onClose={() => setResultDialog(null)}>
+        <DialogTitle>
+          {resultDialog?.type === 'create' ? 'New User Created' : `Password Reset for "${resultDialog?.username}"`}
+        </DialogTitle>
+        <DialogContent>
+          {resultDialog?.type === 'create' && (
+            <>
+              <Typography variant="subtitle2">Username:</Typography>
+              <Stack direction="row" alignItems="center">
+                <Box component="code" sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>{resultDialog.username}</Box>
+                <IconButton onClick={() => copyToClipboard(resultDialog.username)}><ContentCopy fontSize="small" /></IconButton>
+              </Stack>
+            </>
+          )}
+          <Typography variant="subtitle2" mt={2}>Password:</Typography>
+          <Stack direction="row" alignItems="center">
+            <Box component="code" sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>{resultDialog?.password}</Box>
+            <IconButton onClick={() => copyToClipboard(resultDialog!.password)}><ContentCopy fontSize="small" /></IconButton>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResultDialog(null)}>Close</Button>
         </DialogActions>
       </Dialog>
 
