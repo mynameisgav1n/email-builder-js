@@ -28,6 +28,10 @@ export default function SamplesDrawer() {
     fetch('/api/user.php')
       .then((res) => res.json())
       .then((data) => {
+        if (data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
         setUsername(data.username || 'Guest');
       })
       .catch(() => {
@@ -107,7 +111,7 @@ export default function SamplesDrawer() {
             </SidebarButton>
             <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
           </Stack>
-            <Divider />
+          <Divider />
           <Stack alignItems="flex-start">
             <Typography variant="overline" gutterBottom>
               Random Templates
@@ -141,9 +145,6 @@ export default function SamplesDrawer() {
           <Divider />
 
           <Stack>
-            {/*<Typography variant="overline" gutterBottom>
-              Pages
-            </Typography>*/}
             <Button size="small" href="/email-builder-js/templates.html">
               All Templates
             </Button>
