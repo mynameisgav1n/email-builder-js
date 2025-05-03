@@ -1,3 +1,4 @@
+// useradmin.tsx
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
@@ -17,7 +18,6 @@ import theme from './theme';
 interface HtpasswdUser {
   username: string;
   last_online?: string;
-  isAdmin?: boolean;
 }
 
 function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
@@ -31,16 +31,10 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
 function LayoutWrapper({ children }: { children?: React.ReactNode }) {
   const samplesOpen = useSamplesDrawerOpen();
   const ml = useDrawerTransition('margin-left', samplesOpen);
-
   return (
     <>
       <SamplesDrawer />
-      <Stack
-        sx={{
-          marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0,
-          transition: ml,
-        }}
-      >
+      <Stack sx={{ marginLeft: samplesOpen ? `${SAMPLES_DRAWER_WIDTH}px` : 0, transition: ml }}>
         {children}
       </Stack>
     </>
@@ -49,6 +43,7 @@ function LayoutWrapper({ children }: { children?: React.ReactNode }) {
 
 function UserAdminPage() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
+  const [admins, setAdmins] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({ open: false, msg: '' });
   const [unauthorized, setUnauthorized] = useState(false);
@@ -65,14 +60,19 @@ function UserAdminPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/htpasswd.php?action=list');
-      const json = await res.json();
-      if (res.status === 403 || json.error === 'unauthorized') {
+      const [userRes, adminRes] = await Promise.all([
+        fetch('/api/htpasswd.php?action=list'),
+        fetch('/api/user.php?action=admins')
+      ]);
+      const userJson = await userRes.json();
+      const adminJson = await adminRes.json();
+      if (userRes.status === 403 || userJson.error === 'unauthorized') {
         setUnauthorized(true);
         return;
       }
-      if (!res.ok || json.error) throw new Error(json.error || 'Failed to load users');
-      setUsers(json.users);
+      if (!userRes.ok || userJson.error) throw new Error(userJson.error || 'Failed to load users');
+      setUsers(userJson.users);
+      setAdmins(adminJson.admins || []);
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
     } finally {
@@ -209,8 +209,10 @@ function UserAdminPage() {
                   <TableRow key={user.username}>
                     <TableCell>
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <span>{user.username}</span>
-                        {user.isAdmin && <Chip label="Admin" size="small" color="primary" />}
+                        {user.username}
+                        {admins.includes(user.username) && (
+                          <Chip label="Admin" size="small" color="primary" sx={{ fontSize: '0.7rem', height: 20 }} />
+                        )}
                       </Stack>
                     </TableCell>
                     <TableCell>{user.last_online || 'N/A'}</TableCell>
@@ -228,31 +230,14 @@ function UserAdminPage() {
           </TableContainer>
         )}
 
-        {/* Confirm Delete Dialog */}
-        <Dialog open={!!confirmDeleteUser} onClose={() => setConfirmDeleteUser(null)}>
-          <DialogTitle>Delete User</DialogTitle>
-          <DialogContent>
-            Are you sure you want to delete user "{confirmDeleteUser}"? This won't delete their saved emails.
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConfirmDeleteUser(null)}>Cancel</Button>
-            <Button color="error" onClick={handleDelete}>Delete</Button>
-          </DialogActions>
-        </Dialog>
+        {/* Dialogs remain unchanged */}
+        {/* New, Rename, Password, Confirm Delete, Result, Snackbar */}
 
         {/* New User Dialog */}
         <Dialog open={newUserDialog} onClose={() => { setNewUserDialog(false); setValue(''); setGenerated(''); }}>
           <DialogTitle>Create New User</DialogTitle>
           <DialogContent>
-            <TextField
-              autoFocus
-              label="Username"
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              fullWidth
-              size="small"
-              margin="normal"
-            />
+            <TextField autoFocus label="Username" value={value} onChange={e => setValue(e.target.value)} fullWidth size="small" margin="normal" />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => { setNewUserDialog(false); setValue(''); setGenerated(''); }}>Cancel</Button>
@@ -260,20 +245,10 @@ function UserAdminPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Password Dialog */}
         <Dialog open={!!passwordDialog} onClose={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>
           <DialogTitle>Set Password for {passwordDialog?.username}</DialogTitle>
           <DialogContent>
-            <TextField
-              autoFocus
-              label="New Password"
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              fullWidth
-              size="small"
-              margin="normal"
-              type="text"
-            />
+            <TextField autoFocus label="New Password" value={value} onChange={e => setValue(e.target.value)} fullWidth size="small" margin="normal" />
             <Button onClick={generateRandomPassword} sx={{ mt: 1 }}>Generate Password</Button>
           </DialogContent>
           <DialogActions>
@@ -282,19 +257,10 @@ function UserAdminPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Rename Dialog */}
         <Dialog open={!!renameDialog} onClose={() => { setRenameDialog(null); setValue(''); }}>
           <DialogTitle>Rename User {renameDialog?.username}</DialogTitle>
           <DialogContent>
-            <TextField
-              autoFocus
-              label="New Username"
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              fullWidth
-              size="small"
-              margin="normal"
-            />
+            <TextField autoFocus label="New Username" value={value} onChange={e => setValue(e.target.value)} fullWidth size="small" margin="normal" />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => { setRenameDialog(null); setValue(''); }}>Cancel</Button>
@@ -302,7 +268,15 @@ function UserAdminPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Result Dialog */}
+        <Dialog open={!!confirmDeleteUser} onClose={() => setConfirmDeleteUser(null)}>
+          <DialogTitle>Delete User</DialogTitle>
+          <DialogContent>Are you sure you want to delete user "{confirmDeleteUser}"?</DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDeleteUser(null)}>Cancel</Button>
+            <Button color="error" onClick={handleDelete}>Delete</Button>
+          </DialogActions>
+        </Dialog>
+
         <Dialog open={!!resultDialog} onClose={() => setResultDialog(null)}>
           <DialogTitle>
             {resultDialog?.type === 'create' ? 'New User Created' : `Password Reset for "${resultDialog?.username}"`}
