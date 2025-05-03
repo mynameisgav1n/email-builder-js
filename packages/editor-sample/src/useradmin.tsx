@@ -7,6 +7,7 @@ import {
   CssBaseline, useTheme
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
+import { ThemeProvider } from '@mui/material/styles';
 
 import { SAMPLES_DRAWER_WIDTH } from './App/SamplesDrawer';
 import SamplesDrawer from './App/SamplesDrawer';
