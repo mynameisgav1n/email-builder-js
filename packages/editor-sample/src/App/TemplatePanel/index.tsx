@@ -30,7 +30,6 @@ import HtmlPanel from './HtmlPanel';
 import ImportJson from './ImportJson';
 import JsonPanel from './JsonPanel';
 import MainTabsGroup from './MainTabsGroup';
-import ShareButton from './ShareButton';
 import ShortenButton from './ShortenButton';
 import SaveButton from './SaveButton';
 import SendButton from './SendButton';
