@@ -176,12 +176,8 @@ function UserAdminPage() {
       <LayoutWrapper>
         <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
           <Box sx={{ maxWidth: 450, textAlign: 'center', backgroundColor: '#fff', p: 4, borderRadius: 2, boxShadow: 3 }}>
-            <Box sx={{ fontSize: 64, color: '#e53935', mb: 2 }}>
-              ❌
-            </Box>
-            <Typography variant="h4" color="error" gutterBottom>
-              Access Denied
-            </Typography>
+            <Box sx={{ fontSize: 64, color: '#e53935', mb: 2 }}>❌</Box>
+            <Typography variant="h4" color="error" gutterBottom>Access Denied</Typography>
             <Typography>You do not have permission to view this page.</Typography>
           </Box>
         </Box>
@@ -192,12 +188,8 @@ function UserAdminPage() {
   return (
     <LayoutWrapper>
       <Box sx={{ p: 3 }}>
-        <Typography variant="h5" fontWeight={600} mb={2}>
-          .htpasswd User Manager
-        </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => { setNewUserDialog(true); setValue(''); setGenerated(''); }}>
-          Create New User
-        </Button>
+        <Typography variant="h5" fontWeight={600} mb={2}>.htpasswd User Manager</Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => { setNewUserDialog(true); setValue(''); setGenerated(''); }}>Create New User</Button>
 
         {loading ? (
           <CircularProgress sx={{ mt: 4 }} />
@@ -239,6 +231,68 @@ function UserAdminPage() {
           <DialogActions>
             <Button onClick={() => setConfirmDeleteUser(null)}>Cancel</Button>
             <Button color="error" onClick={handleDelete}>Delete</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* New User Dialog */}
+        <Dialog open={newUserDialog} onClose={() => { setNewUserDialog(false); setValue(''); setGenerated(''); }}>
+          <DialogTitle>Create New User</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              label="Username"
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              fullWidth
+              size="small"
+              margin="normal"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setNewUserDialog(false); setValue(''); setGenerated(''); }}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!value.trim()}>Create</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Password Dialog */}
+        <Dialog open={!!passwordDialog} onClose={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>
+          <DialogTitle>Set Password for {passwordDialog?.username}</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              label="New Password"
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              fullWidth
+              size="small"
+              margin="normal"
+              type="text"
+            />
+            <Button onClick={generateRandomPassword} sx={{ mt: 1 }}>Generate Password</Button>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>Cancel</Button>
+            <Button onClick={handlePasswordChange} disabled={!value}>Save</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Rename Dialog */}
+        <Dialog open={!!renameDialog} onClose={() => { setRenameDialog(null); setValue(''); }}>
+          <DialogTitle>Rename User {renameDialog?.username}</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              label="New Username"
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              fullWidth
+              size="small"
+              margin="normal"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setRenameDialog(null); setValue(''); }}>Cancel</Button>
+            <Button onClick={handleRename} disabled={!value.trim() || value === renameDialog?.username}>Rename</Button>
           </DialogActions>
         </Dialog>
 
