@@ -1,5 +1,6 @@
-// useradmin.tsx — Admin Panel for .htpasswd User Management
+// useradmin.tsx — working standalone React panel with mounting
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import {
   Box, Typography, Button, Stack, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Snackbar, CircularProgress,
@@ -12,7 +13,7 @@ interface HtpasswdUser {
   last_online?: string;
 }
 
-export default function HtpasswdPanel() {
+function UserAdminApp() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({ open: false, msg: '' });
@@ -150,7 +151,7 @@ export default function HtpasswdPanel() {
         </TableContainer>
       )}
 
-      {/* Create User Dialog */}
+      {/* Dialogs */}
       <Dialog open={newUserDialog} onClose={() => setNewUserDialog(false)}>
         <DialogTitle>Create New User</DialogTitle>
         <DialogContent>
@@ -170,7 +171,6 @@ export default function HtpasswdPanel() {
         </DialogActions>
       </Dialog>
 
-      {/* Change Password Dialog */}
       <Dialog open={!!passwordDialog} onClose={() => setPasswordDialog(null)}>
         <DialogTitle>Set Password for {passwordDialog?.username}</DialogTitle>
         <DialogContent>
@@ -191,7 +191,6 @@ export default function HtpasswdPanel() {
         </DialogActions>
       </Dialog>
 
-      {/* Rename Dialog */}
       <Dialog open={!!renameDialog} onClose={() => setRenameDialog(null)}>
         <DialogTitle>Rename User {renameDialog?.username}</DialogTitle>
         <DialogContent>
@@ -211,7 +210,6 @@ export default function HtpasswdPanel() {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snack.open}
         autoHideDuration={4000}
@@ -222,3 +220,6 @@ export default function HtpasswdPanel() {
     </Box>
   );
 }
+
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+root.render(<React.StrictMode><UserAdminApp /></React.StrictMode>);
