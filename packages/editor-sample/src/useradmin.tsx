@@ -151,15 +151,36 @@ function UserAdminPage() {
   };
 
   if (unauthorized) {
-    return (
-      <LayoutWrapper>
-        <iframe
+  return (
+    <LayoutWrapper>
+      <Box
+        sx={{
+          height: 'calc(100vh - 64px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#fafafa',
+          padding: 2,
+        }}
+      >
+        <Box
+          component="iframe"
           src="/publicfiles/403.html"
-          style={{ width: '100%', height: '100vh', border: 'none' }}
+          sx={{
+            width: '100%',
+            maxWidth: 800,
+            height: '80vh',
+            border: 'none',
+            borderRadius: 2,
+            boxShadow: 3,
+            backgroundColor: '#fff',
+          }}
         />
-      </LayoutWrapper>
-    );
-  }
+      </Box>
+    </LayoutWrapper>
+  );
+}
+
 
   return (
     <Box sx={{ padding: 3 }}>
