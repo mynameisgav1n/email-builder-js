@@ -27,10 +27,6 @@ function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
   });
 }
 
-function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text);
-}
-
 function UserAdminPage() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,8 +102,7 @@ function UserAdminPage() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Password update failed');
       setPasswordDialog(null);
-      setValue('');
-      setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password });
+      setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password || value });
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
     }
@@ -140,6 +135,11 @@ function UserAdminPage() {
     }
     setValue(result);
     setGenerated(result);
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setSnack({ open: true, msg: 'Copied to clipboard!' });
   };
 
   return (
@@ -253,14 +253,14 @@ function UserAdminPage() {
               <Typography variant="subtitle2">Username:</Typography>
               <Stack direction="row" alignItems="center">
                 <Box component="code" sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>{resultDialog.username}</Box>
-                <IconButton onClick={() => copyToClipboard(resultDialog.username)}><ContentCopy fontSize="small" /></IconButton>
+                <IconButton onClick={() => handleCopy(resultDialog.username)}><ContentCopy fontSize="small" /></IconButton>
               </Stack>
             </>
           )}
           <Typography variant="subtitle2" mt={2}>Password:</Typography>
           <Stack direction="row" alignItems="center">
             <Box component="code" sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>{resultDialog?.password}</Box>
-            <IconButton onClick={() => copyToClipboard(resultDialog!.password)}><ContentCopy fontSize="small" /></IconButton>
+            <IconButton onClick={() => handleCopy(resultDialog!.password)}><ContentCopy fontSize="small" /></IconButton>
           </Stack>
         </DialogContent>
         <DialogActions>
