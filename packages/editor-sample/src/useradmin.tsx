@@ -208,7 +208,7 @@ function UserAdminPage() {
                 {users.map(user => (
                   <TableRow key={user.username}>
                     <TableCell>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Stack direction="row" spacing={2} alignItems="center">
                         {user.username}
                         {admins.includes(user.username) && (
                           <Chip label="Admin" size="small" color="primary" sx={{ fontSize: '0.7rem', height: 20 }} />
