@@ -28,8 +28,8 @@ export default function SamplesDrawer() {
     fetch('/api/user.php')
       .then((res) => res.json())
       .then((data) => {
-        if (data.redirect) {
-          window.location.href = data.redirect;
+        if (data.reset_required) {
+          window.location.href = '/force_password_reset.php';
           return;
         }
         setUsername(data.username || 'Guest');
