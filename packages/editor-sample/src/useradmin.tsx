@@ -119,24 +119,37 @@ function UserAdminPage() {
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (!passwordDialog) return;
-    try {
-      const res = await fetch('/api/htpasswd.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'set_password', username: passwordDialog.username, password: value }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Password update failed');
-      setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password || value });
-      setPasswordDialog(null);
-      setValue('');
-      setGenerated('');
-    } catch (err: any) {
-      setSnack({ open: true, msg: err.message });
-    }
-  };
+const handlePasswordChange = async () => {
+  if (!passwordDialog) return;
+  try {
+    // Step 1: Reset the user's password
+    const res = await fetch('/api/htpasswd.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_password', username: passwordDialog.username, password: value }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Password update failed');
+
+    // Step 2: Mark the user as needing to reset their password on next login
+    const markRes = await fetch('/api/user.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark_reset', username: passwordDialog.username }),
+    });
+    const markJson = await markRes.json();
+    if (!markJson.success) throw new Error(markJson.error || 'Failed to mark password reset flag');
+
+    // Step 3: Show success dialog
+    setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password || value });
+    setPasswordDialog(null);
+    setValue('');
+    setGenerated('');
+  } catch (err: any) {
+    setSnack({ open: true, msg: err.message });
+  }
+};
+
 
   const handleRename = async () => {
     if (!renameDialog) return;
