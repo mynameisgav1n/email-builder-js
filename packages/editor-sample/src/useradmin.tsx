@@ -207,14 +207,14 @@ function UserAdminPage() {
               <TableBody>
                 {users.map(user => (
                   <TableRow key={user.username}>
-                  <TableCell>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <span>{user.username}</span>
-                      {admins.includes(user.username) && (
-                        <Chip label="Admin" size="small" sx={{ fontSize: '0.7rem', height: 20, bgcolor: 'orange', color: 'white', opacity: 0.7 }} />
-                      )}
-                    </Stack>
-                  </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        {user.username}
+                        {admins.includes(user.username) && (
+                          <Chip label="Admin" size="small" color="primary" sx={{ fontSize: '0.7rem', height: 20 }} />
+                        )}
+                      </Stack>
+                    </TableCell>
                     <TableCell>{user.last_online || 'N/A'}</TableCell>
                     <TableCell align="right">
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
