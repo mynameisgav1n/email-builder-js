@@ -18,6 +18,7 @@ import theme from './theme';
 interface HtpasswdUser {
   username: string;
   last_online?: string;
+  reset_required?: boolean;
 }
 
 function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
@@ -221,10 +222,13 @@ const handlePasswordChange = async () => {
                 {users.map(user => (
                   <TableRow key={user.username}>
                     <TableCell>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        {user.username}
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography>{user.username}</Typography>
                         {admins.includes(user.username) && (
                           <Chip label="Admin" size="small" color="primary" sx={{ fontSize: '0.7rem', height: 20 }} />
+                        )}
+                        {user.reset_required && (
+                          <Chip label="Password Reset Required" size="small" color="warning" sx={{ fontSize: '0.7rem', height: 20, opacity: 0.8 }} />
                         )}
                       </Stack>
                     </TableCell>
