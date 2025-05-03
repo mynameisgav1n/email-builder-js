@@ -37,7 +37,7 @@ export default function ShortenButton() {
 
   return (
     <>
-      <Tooltip title="Shorten and copy link">
+      <Tooltip title="Share via Link">
         <IconButton onClick={handleClick} color="primary">
           <LinkOutlined />
         </IconButton>
