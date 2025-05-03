@@ -4,7 +4,7 @@ import {
   Box, Typography, Button, Stack, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Snackbar, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  CssBaseline, useTheme, IconButton
+  CssBaseline, useTheme, IconButton, Chip
 } from '@mui/material';
 import { Add, ContentCopy } from '@mui/icons-material';
 import { ThemeProvider } from '@mui/material/styles';
@@ -17,6 +17,7 @@ import theme from './theme';
 interface HtpasswdUser {
   username: string;
   last_online?: string;
+  isAdmin?: boolean;
 }
 
 function useDrawerTransition(cssProp: 'margin-left', open: boolean) {
@@ -206,7 +207,12 @@ function UserAdminPage() {
               <TableBody>
                 {users.map(user => (
                   <TableRow key={user.username}>
-                    <TableCell>{user.username}</TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <span>{user.username}</span>
+                        {user.isAdmin && <Chip label="Admin" size="small" color="primary" />}
+                      </Stack>
+                    </TableCell>
                     <TableCell>{user.last_online || 'N/A'}</TableCell>
                     <TableCell align="right">
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -329,6 +335,8 @@ function UserAdminPage() {
           message={snack.msg}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
+
+
       </Box>
     </LayoutWrapper>
   );
