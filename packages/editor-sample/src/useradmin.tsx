@@ -335,8 +335,6 @@ function UserAdminPage() {
           message={snack.msg}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
-
-
       </Box>
     </LayoutWrapper>
   );
