@@ -140,7 +140,6 @@ export default function TemplatePanel() {
                 </Tooltip>
               </ToggleButton>
             </ToggleButtonGroup>
-            <ShareButton />
             <ShortenButton />
             <SaveButton />
             <SendButton />
