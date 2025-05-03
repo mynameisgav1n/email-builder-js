@@ -23,8 +23,10 @@ export default function SamplesDrawer() {
   const samplesDrawerOpen = useSamplesDrawerOpen();
   const loadedEmailTitle = useLoadedEmailTitle();
   const [username, setUsername] = useState<string | null>(null);
+  const [admins, setAdmins] = useState<string[]>([]);
 
   useEffect(() => {
+    // Fetch username
     fetch('/api/user.php')
       .then((res) => res.json())
       .then((data) => {
@@ -37,6 +39,12 @@ export default function SamplesDrawer() {
       .catch(() => {
         setUsername('Guest');
       });
+
+    // Fetch list of admins
+    fetch('/api/user.php?action=admins')
+      .then((res) => res.json())
+      .then((data) => setAdmins(data.admins || []))
+      .catch(() => setAdmins([]));
   }, []);
 
   const handleSendEmailClick = () => {
@@ -49,6 +57,8 @@ export default function SamplesDrawer() {
       '_blank'
     );
   };
+
+  const isAdmin = username && admins.includes(username);
 
   return (
     <Drawer
@@ -154,6 +164,11 @@ export default function SamplesDrawer() {
             <Button size="small" href="/email-builder-js/filemanager.html">
               File Manager
             </Button>
+            {isAdmin && (
+              <Button size="small" href="/email-builder-js/useradmin.html">
+                User Management
+              </Button>
+            )}
             <LogoutButton />
           </Stack>
         </Stack>
