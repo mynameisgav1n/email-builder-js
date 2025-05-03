@@ -31,6 +31,7 @@ function UserAdminPage() {
   const [users, setUsers] = useState<HtpasswdUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [snack, setSnack] = useState<{ open: boolean; msg: string }>({ open: false, msg: '' });
+  const [unauthorized, setUnauthorized] = useState(false);
 
   const [newUserDialog, setNewUserDialog] = useState(false);
   const [renameDialog, setRenameDialog] = useState<HtpasswdUser | null>(null);
@@ -38,6 +39,7 @@ function UserAdminPage() {
   const [value, setValue] = useState('');
   const [generated, setGenerated] = useState<string>('');
 
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null);
   const [resultDialog, setResultDialog] = useState<null | { type: 'create' | 'reset'; username: string; password: string }>(null);
 
   const fetchUsers = async () => {
@@ -45,6 +47,10 @@ function UserAdminPage() {
     try {
       const res = await fetch('/api/htpasswd.php?action=list');
       const json = await res.json();
+      if (res.status === 403 || json.error === 'unauthorized') {
+        setUnauthorized(true);
+        return;
+      }
       if (!res.ok || json.error) throw new Error(json.error || 'Failed to load users');
       setUsers(json.users);
     } catch (err: any) {
@@ -56,17 +62,18 @@ function UserAdminPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const handleDelete = async (username: string) => {
-    if (!confirm(`Delete user "${username}"? This won't delete their saved emails.`)) return;
+  const handleDelete = async () => {
+    if (!confirmDeleteUser) return;
     try {
       const res = await fetch('/api/htpasswd.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', username }),
+        body: JSON.stringify({ action: 'delete', username: confirmDeleteUser }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Delete failed');
       setSnack({ open: true, msg: 'User deleted' });
+      setConfirmDeleteUser(null);
       fetchUsers();
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
@@ -82,9 +89,9 @@ function UserAdminPage() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Create failed');
+      setResultDialog({ type: 'create', username: value, password: json.password });
       setValue('');
       setNewUserDialog(false);
-      setResultDialog({ type: 'create', username: value, password: json.password });
       fetchUsers();
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
@@ -101,8 +108,9 @@ function UserAdminPage() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Password update failed');
-      setPasswordDialog(null);
       setResultDialog({ type: 'reset', username: passwordDialog.username, password: json.password || value });
+      setPasswordDialog(null);
+      setValue('');
     } catch (err: any) {
       setSnack({ open: true, msg: err.message });
     }
@@ -142,13 +150,24 @@ function UserAdminPage() {
     setSnack({ open: true, msg: 'Copied to clipboard!' });
   };
 
+  if (unauthorized) {
+    return (
+      <LayoutWrapper>
+        <iframe
+          src="/publicfiles/403.html"
+          style={{ width: '100%', height: '100vh', border: 'none' }}
+        />
+      </LayoutWrapper>
+    );
+  }
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h5" fontWeight={600} mb={2}>
         .htpasswd User Manager
       </Typography>
 
-      <Button variant="contained" startIcon={<Add />} onClick={() => setNewUserDialog(true)}>
+      <Button variant="contained" startIcon={<Add />} onClick={() => { setNewUserDialog(true); setValue(''); }}>
         Create New User
       </Button>
 
@@ -173,7 +192,7 @@ function UserAdminPage() {
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
                       <Button size="small" onClick={() => { setPasswordDialog(user); setValue(''); setGenerated(''); }}>Password</Button>
                       <Button size="small" onClick={() => { setRenameDialog(user); setValue(user.username); }}>Rename</Button>
-                      <Button size="small" color="error" onClick={() => handleDelete(user.username)}>Delete</Button>
+                      <Button size="small" color="error" onClick={() => setConfirmDeleteUser(user.username)}>Delete</Button>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -183,8 +202,20 @@ function UserAdminPage() {
         </TableContainer>
       )}
 
-      {/* Dialogs */}
-      <Dialog open={newUserDialog} onClose={() => setNewUserDialog(false)}>
+      {/* Confirm Delete Dialog */}
+      <Dialog open={!!confirmDeleteUser} onClose={() => setConfirmDeleteUser(null)}>
+        <DialogTitle>Delete User</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete user "{confirmDeleteUser}"? This won't delete their saved emails.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDeleteUser(null)}>Cancel</Button>
+          <Button color="error" onClick={handleDelete}>Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* New User Dialog */}
+      <Dialog open={newUserDialog} onClose={() => { setNewUserDialog(false); setValue(''); }}>
         <DialogTitle>Create New User</DialogTitle>
         <DialogContent>
           <TextField
@@ -198,12 +229,13 @@ function UserAdminPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setNewUserDialog(false)}>Cancel</Button>
+          <Button onClick={() => { setNewUserDialog(false); setValue(''); }}>Cancel</Button>
           <Button onClick={handleCreate} disabled={!value.trim()}>Create</Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={!!passwordDialog} onClose={() => setPasswordDialog(null)}>
+      {/* Password Reset Dialog */}
+      <Dialog open={!!passwordDialog} onClose={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>
         <DialogTitle>Set Password for {passwordDialog?.username}</DialogTitle>
         <DialogContent>
           <TextField
@@ -219,12 +251,13 @@ function UserAdminPage() {
           <Button onClick={generateRandomPassword} sx={{ mt: 1 }}>Generate Password</Button>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPasswordDialog(null)}>Cancel</Button>
+          <Button onClick={() => { setPasswordDialog(null); setValue(''); setGenerated(''); }}>Cancel</Button>
           <Button onClick={handlePasswordChange} disabled={!value}>Save</Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={!!renameDialog} onClose={() => setRenameDialog(null)}>
+      {/* Rename Dialog */}
+      <Dialog open={!!renameDialog} onClose={() => { setRenameDialog(null); setValue(''); }}>
         <DialogTitle>Rename User {renameDialog?.username}</DialogTitle>
         <DialogContent>
           <TextField
@@ -238,11 +271,12 @@ function UserAdminPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRenameDialog(null)}>Cancel</Button>
+          <Button onClick={() => { setRenameDialog(null); setValue(''); }}>Cancel</Button>
           <Button onClick={handleRename} disabled={!value.trim() || value === renameDialog?.username}>Rename</Button>
         </DialogActions>
       </Dialog>
 
+      {/* Result Dialog */}
       <Dialog open={!!resultDialog} onClose={() => setResultDialog(null)}>
         <DialogTitle>
           {resultDialog?.type === 'create' ? 'New User Created' : `Password Reset for "${resultDialog?.username}"`}
@@ -279,7 +313,7 @@ function UserAdminPage() {
   );
 }
 
-function LayoutWrapper() {
+function LayoutWrapper({ children }: { children?: React.ReactNode }) {
   const samplesOpen = useSamplesDrawerOpen();
   const ml = useDrawerTransition('margin-left', samplesOpen);
 
@@ -292,7 +326,7 @@ function LayoutWrapper() {
           transition: ml,
         }}
       >
-        <UserAdminPage />
+        {children}
       </Stack>
     </>
   );
@@ -303,7 +337,9 @@ root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LayoutWrapper />
+      <LayoutWrapper>
+        <UserAdminPage />
+      </LayoutWrapper>
     </ThemeProvider>
   </React.StrictMode>
 );
