@@ -188,7 +188,7 @@ function UserAdminPage() {
   return (
     <LayoutWrapper>
       <Box sx={{ p: 3 }}>
-        <Typography variant="h5" fontWeight={600} mb={2}>.htpasswd User Manager</Typography>
+        <Typography variant="h5" fontWeight={600} mb={2}>User Management</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => { setNewUserDialog(true); setValue(''); setGenerated(''); }}>Create New User</Button>
 
         {loading ? (
