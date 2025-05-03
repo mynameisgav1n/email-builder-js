@@ -58,28 +58,43 @@ function UserAdminPage() {
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null);
   const [resultDialog, setResultDialog] = useState<null | { type: 'create' | 'reset'; username: string; password: string }>(null);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const [userRes, adminRes] = await Promise.all([
-        fetch('/api/htpasswd.php?action=list'),
-        fetch('/api/user.php?action=admins')
-      ]);
-      const userJson = await userRes.json();
-      const adminJson = await adminRes.json();
-      if (userRes.status === 403 || userJson.error === 'unauthorized') {
-        setUnauthorized(true);
-        return;
-      }
-      if (!userRes.ok || userJson.error) throw new Error(userJson.error || 'Failed to load users');
-      setUsers(userJson.users);
-      setAdmins(adminJson.admins || []);
-    } catch (err: any) {
-      setSnack({ open: true, msg: err.message });
-    } finally {
-      setLoading(false);
+const fetchUsers = async () => {
+  setLoading(true);
+  try {
+    const [userRes, adminRes] = await Promise.all([
+      fetch('/api/user.php'),
+      fetch('/api/user.php?action=admins'),
+    ]);
+
+    const userJson = await userRes.json();
+    const adminJson = await adminRes.json();
+
+    if (!userRes.ok || userJson.error || !userJson.username) {
+      setUnauthorized(true);
+      return;
     }
-  };
+
+    const currentUsername = userJson.username;
+    const isAdmin = Array.isArray(adminJson.admins) && adminJson.admins.includes(currentUsername);
+
+    if (!isAdmin) {
+      setUnauthorized(true);
+      return;
+    }
+
+    const usersRes = await fetch('/api/htpasswd.php?action=list');
+    const usersJson = await usersRes.json();
+    if (!usersRes.ok || usersJson.error) throw new Error(usersJson.error || 'Failed to load users');
+
+    setUsers(usersJson.users);
+    setAdmins(adminJson.admins || []);
+  } catch (err: any) {
+    setSnack({ open: true, msg: err.message });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => { fetchUsers(); }, []);
 
