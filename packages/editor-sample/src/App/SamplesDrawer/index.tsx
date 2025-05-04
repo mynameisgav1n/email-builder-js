@@ -172,8 +172,7 @@ export default function SamplesDrawer() {
             <LogoutButton />
           </Stack>
         </Stack>
-
-        <Stack spacing={2} px={0.75} py={3}>
+        <Stack spacing={1} px={0.75} py={3}>
           <Box>
             <Typography variant="overline" gutterBottom>
               Need help?
@@ -190,6 +189,9 @@ export default function SamplesDrawer() {
           >
             Send email for help
           </Button>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              © 2025 Inspire Youth USA Inc. All Rights Reserved.
+            </Typography>
         </Stack>
       </Stack>
     </Drawer>
