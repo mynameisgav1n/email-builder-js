@@ -184,7 +184,7 @@ export default function SamplesDrawer() {
               Need help?
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Contact tech@inspireyouthnj.org.
+              Contact tech@inspireyouthnj.org
             </Typography>
           </Box>
           <Button
