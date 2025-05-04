@@ -178,7 +178,7 @@ export default function SamplesDrawer() {
         <Box sx={{ flexGrow: 1 }} />
 
         {/* Bottom section */}
-        <Stack px={0.75} py={3}>
+        <Stack spacing={1} px={0.75} py={3}>
           <Box>
             <Typography variant="overline" gutterBottom>
               Need help?
