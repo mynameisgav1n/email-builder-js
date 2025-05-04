@@ -70,13 +70,12 @@ export default function SamplesDrawer() {
       }}
     >
       <Stack
-        spacing={3}
         py={1}
         px={2}
         width={SAMPLES_DRAWER_WIDTH}
-        justifyContent="space-between"
         height="100%"
       >
+        {/* Top section */}
         <Stack
           spacing={2}
           sx={{
@@ -108,6 +107,7 @@ export default function SamplesDrawer() {
                 : ''}
             </Typography>
           </Box>
+
           <Divider />
           <Stack alignItems="flex-start">
             <Typography variant="overline" gutterBottom>
@@ -121,6 +121,7 @@ export default function SamplesDrawer() {
             </SidebarButton>
             <SidebarButton href="/email-builder-js#">Empty</SidebarButton>
           </Stack>
+
           <Divider />
           <Stack alignItems="flex-start">
             <Typography variant="overline" gutterBottom>
@@ -172,7 +173,12 @@ export default function SamplesDrawer() {
             <LogoutButton />
           </Stack>
         </Stack>
-        <Stack spacing={1} px={0.75} py={3}>
+
+        {/* Spacer to push bottom section down */}
+        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Bottom section */}
+        <Stack spacing={2} px={0.75} py={3}>
           <Box>
             <Typography variant="overline" gutterBottom>
               Need help?
@@ -189,9 +195,9 @@ export default function SamplesDrawer() {
           >
             Send email for help
           </Button>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              © 2025 Inspire Youth USA Inc. All Rights Reserved.
-            </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            © 2025 Inspire Youth USA Inc. All Rights Reserved.
+          </Typography>
         </Stack>
       </Stack>
     </Drawer>
