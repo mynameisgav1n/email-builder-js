@@ -184,17 +184,17 @@ export default function SamplesDrawer() {
               Need help?
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              Contact Gavin at tech@inspireyouthnj.org.
+              Contact tech@inspireyouthnj.org.
             </Typography>
           </Box>
-          {/*<Button
+          <Button
             variant="contained"
             color="primary"
             sx={{ justifyContent: 'center' }}
             onClick={handleSendEmailClick}
           >
             Send email for help
-          </Button>*/}
+          </Button>
           <Typography variant="body2" color="text.secondary" paragraph>
             © 2025 Inspire Youth USA Inc. All Rights Reserved.
           </Typography>
