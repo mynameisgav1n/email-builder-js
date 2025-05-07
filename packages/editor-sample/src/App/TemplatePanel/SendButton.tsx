@@ -42,7 +42,7 @@ export default function SendButton() {
     const baseUrl = `https://www.inspireyouthnj.org/admin/blastemail`;
 
     // NEW: If the HTML contains { or }, copy and open without prefill
-    if (minifiedHtml.includes('{') || minifiedHtml.includes('}')) {
+    if (minifiedHtml.includes('{') || minifiedHtml.includes('}') || minifiedHtml.includes('`')) {
       await copyToClipboard(minifiedHtml);
       alert(
         'The HTML code has been copied to your clipboard.\n\nPlease paste it into the "Email Content" field on the Blast Email form that will open in a new tab.'
