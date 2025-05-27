@@ -96,7 +96,6 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
       <BaseSidebarPanel title="Image block">
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
-            key={data.props?.url || ''}
             label="Source URL"
             defaultValue={data.props?.url ?? ''}
             inputRef={sourceUrlRef} // ← attach ref
