@@ -1,5 +1,5 @@
 // ImageSidebarPanel.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as Zod from 'zod';
 import {
   Stack,
@@ -46,19 +46,13 @@ type ImageSidebarPanelProps = {
 
 export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelProps) {
   const [, setErrors] = useState<Zod.ZodError | null>(null);
-
-  // Snackbar state for errors/messages
-  const [snack, setSnack] = useState<{ open: boolean; msg: string }>({
-    open: false,
-    msg: '',
-  });
-
-  // picker state
+  const [snack, setSnack] = useState<{ open: boolean; msg: string }>({ open: false, msg: '' });
   const [chooserOpen, setChooserOpen] = useState(false);
   const [dialogPath, setDialogPath] = useState('');
   const [dialogItems, setDialogItems] = useState<FileItem[]>([]);
 
-  // Validate & commit updates
+  const sourceUrlRef = useRef<HTMLInputElement>(null); // ← input ref here
+
   const updateData = (d: unknown) => {
     const res = ImagePropsSchema.safeParse(d);
     if (res.success) {
@@ -69,12 +63,9 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
     }
   };
 
-  // Fetch items whenever dialog opens or path changes
   useEffect(() => {
     if (!chooserOpen) return;
-    fetch(
-      `/api/filemanager.php?action=list&path=${encodeURIComponent(dialogPath)}`
-    )
+    fetch(`/api/filemanager.php?action=list&path=${encodeURIComponent(dialogPath)}`)
       .then((r) => r.json())
       .then((json) => {
         if (Array.isArray(json.items)) {
@@ -90,22 +81,25 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
   const dialogFolders = dialogItems.filter((i) => i.type === 'folder');
   const dialogFiles = dialogItems.filter((i) => i.type === 'file');
 
-  // choose file URL
   const chooseUrl = (item: FileItem) => {
     const full = `${window.location.origin}${item.url}`;
     updateData({ ...data, props: { ...data.props, url: full } });
     setChooserOpen(false);
+    // blur the input after image is chosen
+    setTimeout(() => {
+      sourceUrlRef.current?.blur();
+    }, 0);
   };
 
   return (
     <>
       <BaseSidebarPanel title="Image block">
-        {/* Source URL + Choose (now controlled) */}
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
             key={data.props?.url || ''}
             label="Source URL"
             defaultValue={data.props?.url ?? ''}
+            inputRef={sourceUrlRef} // ← attach ref
             onChange={(v) => {
               const url = v.trim() || null;
               updateData({ ...data, props: { ...data.props, url } });
@@ -124,7 +118,6 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
           </Button>
         </Stack>
 
-        {/* Other fields */}
         <TextInput
           label="Alt text"
           value={data.props?.alt ?? ''}
@@ -142,18 +135,15 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
           <TextDimensionInput
             label="Width"
             defaultValue={data.props?.width}
-            onChange={(width) =>
-              updateData({ ...data, props: { ...data.props, width } })
-            }
+            onChange={(width) => updateData({ ...data, props: { ...data.props, width } })}
           />
           <TextDimensionInput
             label="Height"
             defaultValue={data.props?.height}
-            onChange={(height) =>
-              updateData({ ...data, props: { ...data.props, height } })
-            }
+            onChange={(height) => updateData({ ...data, props: { ...data.props, height } })}
           />
         </Stack>
+
         <RadioGroupInput
           label="Alignment"
           defaultValue={data.props?.contentAlignment ?? 'middle'}
@@ -171,6 +161,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
             <VerticalAlignBottomOutlined fontSize="small" />
           </ToggleButton>
         </RadioGroupInput>
+
         <MultiStylePropertyPanel
           names={['backgroundColor', 'textAlign', 'padding']}
           value={data.style}
@@ -178,16 +169,9 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         />
       </BaseSidebarPanel>
 
-      {/* Explorer Dialog */}
-      <Dialog
-        open={chooserOpen}
-        onClose={() => setChooserOpen(false)}
-        fullWidth
-        maxWidth="md"
-      >
+      <Dialog open={chooserOpen} onClose={() => setChooserOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>Select Image from Explorer</DialogTitle>
         <DialogContent dividers>
-          {/* Folders Grid */}
           {dialogFolders.length > 0 && (
             <Typography variant="subtitle1" gutterBottom>
               Folders
@@ -218,13 +202,14 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
                   sx={{ cursor: 'pointer', textAlign: 'center', p: 2 }}
                 >
                   <FolderIcon fontSize="large" />
-                  <Typography noWrap mt={1}>{f.name}</Typography>
+                  <Typography noWrap mt={1}>
+                    {f.name}
+                  </Typography>
                 </Card>
               </Grid>
             ))}
           </Grid>
 
-          {/* Images Grid */}
           {dialogFiles.length > 0 && (
             <Typography variant="subtitle1" gutterBottom>
               Images
@@ -246,11 +231,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
                       }}
                     />
                     <Typography noWrap mt={1}>{file.name}</Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                    >
+                    <Typography variant="caption" color="text.secondary" display="block">
                       {file.username} •{' '}
                       {file.creation_date
                         ? new Date(file.creation_date).toLocaleString()
@@ -269,7 +250,6 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         </DialogContent>
       </Dialog>
 
-      {/* Snackbar for errors */}
       <Snackbar
         open={snack.open}
         autoHideDuration={3000}
