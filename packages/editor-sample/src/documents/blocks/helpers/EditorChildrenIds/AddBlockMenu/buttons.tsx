@@ -70,8 +70,6 @@ export const BUTTONS: TButtonProps[] = [
       type: 'Image',
       data: {
         props: {
-          url: 'https://assets.usewaypoint.com/sample-image.jpg',
-          alt: 'Sample product',
           contentAlignment: 'middle',
           linkHref: null,
         },
