@@ -97,13 +97,6 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
     setChooserOpen(false);
   };
 
-  // State for controlled Source URL input
-  const [sourceUrl, setSourceUrl] = useState(data.props?.url ?? '');
-  // Sync with props when data.props?.url changes (e.g., image selected)
-  useEffect(() => {
-    setSourceUrl(data.props?.url ?? '');
-  }, [data.props?.url]);
-
   return (
     <>
       <BaseSidebarPanel title="Image block">
@@ -111,11 +104,9 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
             label="Source URL"
-            value={sourceUrl}
+            defaultValue={data.props?.url ?? ''}
             onChange={(v) => {
-              const trimmed = v.trim();
-              setSourceUrl(trimmed);
-              const url = trimmed.length === 0 ? null : trimmed;
+              const url = v.trim() || null;
               updateData({ ...data, props: { ...(data.props ?? {}), url } });
             }}
             fullWidth
