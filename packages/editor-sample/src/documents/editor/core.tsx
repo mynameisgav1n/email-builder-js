@@ -79,7 +79,7 @@ const EDITOR_DICTIONARY = buildBlockConfigurationDictionary({
         ...data,
         props: {
           ...data.props,
-          url: data.props?.url ?? 'https://placehold.co/600x400/fbeadd/d1b199?text=Your%20Image',
+          url: data.props?.url ?? 'https://placehold.co/600x200/F8D3B7/black?text=Your%20Image\nHere',
         },
       };
       return (
