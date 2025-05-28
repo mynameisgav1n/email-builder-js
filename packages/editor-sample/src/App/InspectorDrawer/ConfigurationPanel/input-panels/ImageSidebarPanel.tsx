@@ -1,5 +1,5 @@
 // ImageSidebarPanel.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as Zod from 'zod';
 import {
   Stack,
@@ -58,6 +58,8 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
   const [dialogPath, setDialogPath] = useState('');
   const [dialogItems, setDialogItems] = useState<FileItem[]>([]);
 
+  const sourceUrlRef = useRef<HTMLInputElement>(null);
+
   // Validate & commit updates
   const updateData = (d: unknown) => {
     const res = ImagePropsSchema.safeParse(d);
@@ -95,6 +97,9 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
     const full = `${window.location.origin}${item.url}`;
     updateData({ ...data, props: { ...(data.props ?? {}), url: full } });
     setChooserOpen(false);
+    setTimeout(() => {
+      sourceUrlRef.current?.blur();
+    }, 0);
   };
 
   return (
@@ -104,7 +109,8 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
             label="Source URL"
-            defaultValue={data.props?.url ?? ''}
+            value={data.props?.url ?? ''}
+            inputRef={sourceUrlRef}
             onChange={(v) => {
               const url = v.trim() || null;
               updateData({ ...data, props: { ...(data.props ?? {}), url } });
