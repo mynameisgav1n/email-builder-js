@@ -94,6 +94,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
   const chooseUrl = (item: FileItem) => {
     const full = `${window.location.origin}${item.url}`;
     updateData({ ...data, props: { ...(data.props ?? {}), url: full } });
+    setData(prev => ({ ...prev, props: { ...(prev.props ?? {}), url: full } }));
     setChooserOpen(false);
   };
 
@@ -103,6 +104,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         {/* Source URL + Choose (now controlled) */}
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
+            key={data.props?.url ?? ''}
             label="Source URL"
             defaultValue={data.props?.url ?? ''}
             onChange={(v) => {
