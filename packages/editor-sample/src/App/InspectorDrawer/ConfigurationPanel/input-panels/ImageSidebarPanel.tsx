@@ -93,7 +93,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
   // choose file URL
   const chooseUrl = (item: FileItem) => {
     const full = `${window.location.origin}${item.url}`;
-    updateData({ ...data, props: { ...data.props, url: full } });
+    updateData({ ...data, props: { ...(data.props ?? {}), url: full } });
     setChooserOpen(false);
   };
 
@@ -107,7 +107,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
             defaultValue={data.props?.url ?? ''}
             onChange={(v) => {
               const url = v.trim() || null;
-              updateData({ ...data, props: { ...data.props, url } });
+              updateData({ ...data, props: { ...(data.props ?? {}), url } });
             }}
             fullWidth
           />
@@ -126,15 +126,15 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         {/* Other fields */}
         <TextInput
           label="Alt text"
-          value={data.props?.alt ?? ''}
-          onChange={(alt) => updateData({ ...data, props: { ...data.props, alt } })}
+          defaultValue={data.props?.alt ?? ''}
+          onChange={(alt) => updateData({ ...data, props: { ...(data.props ?? {}), alt } })}
         />
         <TextInput
           label="Click through URL"
-          value={data.props?.linkHref ?? ''}
+          defaultValue={data.props?.linkHref ?? ''}
           onChange={(v) => {
             const linkHref = v.trim() || null;
-            updateData({ ...data, props: { ...data.props, linkHref } });
+            updateData({ ...data, props: { ...(data.props ?? {}), linkHref } });
           }}
         />
         <Stack direction="row" spacing={2} my={2}>
