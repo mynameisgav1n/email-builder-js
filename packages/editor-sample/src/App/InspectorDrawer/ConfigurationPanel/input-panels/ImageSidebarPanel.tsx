@@ -104,7 +104,7 @@ export default function ImageSidebarPanel({ data, setData }: ImageSidebarPanelPr
         <Stack direction="row" spacing={1} alignItems="center" mb={2}>
           <TextInput
             label="Source URL"
-            value={data.props?.url ?? ''}
+            defaultValue={data.props?.url ?? ''}
             onChange={(v) => {
               const url = v.trim() || null;
               updateData({ ...data, props: { ...(data.props ?? {}), url } });
