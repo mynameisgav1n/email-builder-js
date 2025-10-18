@@ -33,7 +33,7 @@ import MainTabsGroup from './MainTabsGroup';
 import ShortenButton from './ShortenButton';
 import SaveButton from './SaveButton';
 import SendButton from './SendButton';
-import SendComposer from './SendComposer';
+import SendEmailModal from './SendEmailModal';
 
 export default function TemplatePanel() {
   const document = useDocument();
@@ -144,7 +144,7 @@ export default function TemplatePanel() {
             <ShortenButton />
             <SaveButton />
             <SendButton />
-            <SendComposer />
+            <SendEmailModal />
           </Stack>
         </Stack>
         <ToggleInspectorPanelButton />
