@@ -1,35 +1,46 @@
 // ==============================================
-// File: /components/SendComposer.tsx
-// Combined: Send button + inline SendComposer modal in one file
+// File: /components/SendEmailModal.tsx
+// Purpose: Self-contained Gmail-style email composer with Send button trigger
+// Works alongside existing SendButton without naming conflicts
 // ==============================================
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-export type Importance = "Normal" | "High" | "Low";
-
+type Importance = "Normal" | "High" | "Low";
 interface UserResponse { fullName?: string; email?: string }
 
-interface SendComposerProps {
-  html: string;              // the email HTML to preview/send
+interface SendEmailModalProps {
+  html: string;              // email HTML to preview/send
   defaultSubject?: string;   // optional default subject
   buttonClassName?: string;  // optional custom button styles
   buttonLabel?: string;      // optional label (default: "Send")
 }
 
-// Our API endpoint (server forwards to Make or sends email itself)
+// API endpoint — PHP file that forwards payload to Make or SMTP
 const API_ENDPOINT = "/api/sendEmail.php";
 
-export default function SendComposer({ html, defaultSubject, buttonClassName, buttonLabel = "Send" }: SendComposerProps) {
+// ----------------------------------------------
+// Outer component: the trigger button + modal
+// ----------------------------------------------
+export default function SendEmailModal({
+  html,
+  defaultSubject,
+  buttonClassName,
+  buttonLabel = "Send",
+}: SendEmailModalProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         className={buttonClassName || "px-4 py-2 rounded-lg bg-black text-white"}
         onClick={() => setOpen(true)}
-        title="Send"
-      >{buttonLabel}</button>
+        title="Send Email"
+      >
+        {buttonLabel}
+      </button>
+
       {open && (
-        <SendComposer
+        <SendEmailComposer
           open={open}
           onClose={() => setOpen(false)}
           html={html}
@@ -40,32 +51,40 @@ export default function SendComposer({ html, defaultSubject, buttonClassName, bu
   );
 }
 
-// ==============================================
-// Inline modal component (kept private to this file)
-// ==============================================
-
-function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; onClose: () => void; html: string; defaultSubject?: string; }) {
+// ----------------------------------------------
+// Inner modal: the Gmail-style composer UI
+// ----------------------------------------------
+function SendEmailComposer({
+  open,
+  onClose,
+  html,
+  defaultSubject,
+}: {
+  open: boolean;
+  onClose: () => void;
+  html: string;
+  defaultSubject?: string;
+}) {
   const [loadingUser, setLoadingUser] = useState(false);
   const [user, setUser] = useState<UserResponse>({});
-
-  const [fromName, setFromName]   = useState<string>("Inspire Youth NJ");
-  const [fromEmail, setFromEmail] = useState<string>("members@inspireyouthnj.org");
-  const [replyTo, setReplyTo]     = useState<string>("members@inspireyouthnj.org");
-  const [subject, setSubject]     = useState<string>(defaultSubject || "");
+  const [fromName, setFromName] = useState("Inspire Youth NJ");
+  const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
+  const [replyTo, setReplyTo] = useState("members@inspireyouthnj.org");
+  const [subject, setSubject] = useState(defaultSubject || "");
   const [importance, setImportance] = useState<Importance>("Normal");
 
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Load current user info
+  // Fetch current user
   useEffect(() => {
     if (!open) return;
     setLoadingUser(true);
     fetch("/api/user.php")
-      .then(r => r.ok ? r.json() : Promise.reject(new Error("Failed to load user")))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to load user"))))
       .then((data: UserResponse) => {
         setUser(data || {});
         if (data?.email) setReplyTo(data.email);
@@ -74,9 +93,9 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
       .finally(() => setLoadingUser(false));
   }, [open]);
 
-  // Options for fromName
+  // Options for From Name
   const fromNameOptions = useMemo(() => {
-    const opts = ["Inspire Youth NJ"] as string[];
+    const opts = ["Inspire Youth NJ"];
     const ufn = (user?.fullName || "").trim();
     if (ufn) {
       opts.push(`${ufn} (Inspire Youth NJ)`);
@@ -94,19 +113,20 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
     "important-notifications@inspireyouthnj.org",
     "noreply@inspireyouthnj.org",
   ];
+
   const emailOptions = useMemo(() => {
     const opts = [...staticEmails];
     if (user?.email && !opts.includes(user.email)) opts.push(user.email);
     return opts;
   }, [user]);
 
-  // Keep reply-to in sync with fromEmail by default (but allow manual override)
+  // Keep reply-to synced with fromEmail (if same as default)
   useEffect(() => {
     if (!open) return;
-    setReplyTo(prev => (prev === fromEmail ? fromEmail : prev));
+    setReplyTo((prev) => (prev === fromEmail ? fromEmail : prev));
   }, [fromEmail, open]);
 
-  // Render HTML preview in an iframe
+  // Render email HTML in preview iframe
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
@@ -116,13 +136,14 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
     doc.close();
   }, [open, html]);
 
+  // Handle Send
   const onSend = async () => {
     setError("");
     setSuccess("");
 
-    if (!subject.trim()) { setError("Subject is required"); return; }
-    if (!fromEmail) { setError("From email is required"); return; }
-    if (!fromName) { setError("From name is required"); return; }
+    if (!subject.trim()) return setError("Subject is required");
+    if (!fromEmail) return setError("From email is required");
+    if (!fromName) return setError("From name is required");
 
     setSending(true);
     try {
@@ -152,8 +173,8 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
 
       setSuccess("Queued for sending");
-      // Optionally auto-close
-      // setTimeout(onClose, 800);
+      // Optionally close after a delay:
+      // setTimeout(onClose, 1000);
     } catch (e: any) {
       setError(e?.message || "Failed to send");
     } finally {
@@ -166,7 +187,7 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      {/* Composer Card */}
+      {/* Composer card */}
       <div className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl border overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
@@ -178,8 +199,12 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
               onClick={onSend}
               className="px-4 py-2 text-sm rounded-lg bg-black text-white disabled:opacity-50"
               disabled={sending}
-            >{sending ? "Sending…" : "Send"}</button>
-            <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg border">Close</button>
+            >
+              {sending ? "Sending…" : "Send"}
+            </button>
+            <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg border">
+              Close
+            </button>
           </div>
         </div>
 
@@ -188,28 +213,56 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="flex flex-col text-sm">
               <span className="text-gray-600 mb-1">From name</span>
-              <select className="border rounded-lg px-3 py-2" value={fromName} onChange={e=>setFromName(e.target.value)}>
-                {fromNameOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              <select
+                className="border rounded-lg px-3 py-2"
+                value={fromName}
+                onChange={(e) => setFromName(e.target.value)}
+              >
+                {fromNameOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
               </select>
             </label>
 
             <label className="flex flex-col text-sm">
               <span className="text-gray-600 mb-1">From email</span>
-              <select className="border rounded-lg px-3 py-2" value={fromEmail} onChange={e=>setFromEmail(e.target.value)}>
-                {emailOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              <select
+                className="border rounded-lg px-3 py-2"
+                value={fromEmail}
+                onChange={(e) => setFromEmail(e.target.value)}
+              >
+                {emailOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
               </select>
             </label>
 
             <label className="flex flex-col text-sm">
               <span className="text-gray-600 mb-1">Reply-To</span>
-              <select className="border rounded-lg px-3 py-2" value={replyTo} onChange={e=>setReplyTo(e.target.value)}>
-                {emailOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              <select
+                className="border rounded-lg px-3 py-2"
+                value={replyTo}
+                onChange={(e) => setReplyTo(e.target.value)}
+              >
+                {emailOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
               </select>
             </label>
 
             <label className="flex flex-col text-sm">
               <span className="text-gray-600 mb-1">Importance</span>
-              <select className="border rounded-lg px-3 py-2" value={importance} onChange={e=>setImportance(e.target.value as Importance)}>
+              <select
+                className="border rounded-lg px-3 py-2"
+                value={importance}
+                onChange={(e) => setImportance(e.target.value as Importance)}
+              >
                 <option>Normal</option>
                 <option>High</option>
                 <option>Low</option>
@@ -219,7 +272,12 @@ function SendComposer({ open, onClose, html, defaultSubject }: { open: boolean; 
 
           <label className="flex flex-col text-sm">
             <span className="text-gray-600 mb-1">Subject</span>
-            <input className="border rounded-lg px-3 py-2" value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Subject" />
+            <input
+              className="border rounded-lg px-3 py-2"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Subject"
+            />
           </label>
         </div>
 
