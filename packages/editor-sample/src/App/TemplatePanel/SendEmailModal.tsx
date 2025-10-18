@@ -1,85 +1,105 @@
 // ==============================================
-// File: /components/SendEmailModal.tsx
-// Purpose: Self-contained Gmail-style email composer with Send button trigger
-// Works alongside existing SendButton without naming conflicts
+// File: /components/SendEmailButton.tsx
+// Purpose: MUI IconButton that opens a Gmail-style composer Dialog.
+//          HTML is auto-resolved from the URL (?html= or ?HTML=).
+//          On Send, POSTs JSON to /api/sendEmail.php.
+//
+// Usage:
+//   <SendEmailButton />
+//
+// If your original SendButton used a different icon, replace SendOutlined below,
+// or pass a custom icon via the `icon` prop.
 // ==============================================
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Snackbar,
+  Box,
+  Grid,
+  Paper,
+} from "@mui/material";
+import { SendOutlined } from "@mui/icons-material"; // swap to your original icon if different
 
 type Importance = "Normal" | "High" | "Low";
 interface UserResponse { fullName?: string; email?: string }
 
-interface SendEmailModalProps {
-  html: string;              // email HTML to preview/send
-  defaultSubject?: string;   // optional default subject
-  buttonClassName?: string;  // optional custom button styles
-  buttonLabel?: string;      // optional label (default: "Send")
+interface SendEmailButtonProps {
+  tooltip?: string;
+  icon?: React.ReactNode; // if you want to inject the exact icon from your current SendButton
 }
 
-// API endpoint — PHP file that forwards payload to Make or SMTP
 const API_ENDPOINT = "/api/sendEmail.php";
 
-// ----------------------------------------------
-// Outer component: the trigger button + modal
-// ----------------------------------------------
-export default function SendEmailModal({
-  html,
-  defaultSubject,
-  buttonClassName,
-  buttonLabel = "Send",
-}: SendEmailModalProps) {
+// Robustly decode ?html= (or ?HTML=), handling double-encoding and potential base64
+function resolveHtmlFromQuery(): string {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    let raw = sp.get("html") ?? sp.get("HTML");
+    if (!raw) return "";
+
+    let decoded = "";
+    try { decoded = decodeURIComponent(raw); } catch { decoded = raw; }
+    try { decoded = decodeURIComponent(decoded); } catch {}
+
+    const looksLikeHtml = /<(!doctype|html|head|body|table|div|span|p|mj-|style)/i.test(decoded);
+    const looksLikeBase64 = /^[A-Za-z0-9+/=\s]+$/.test(decoded) && decoded.length % 4 === 0;
+    if (!looksLikeHtml && looksLikeBase64) {
+      try {
+        const b64 = atob(decoded.replace(/\s+/g, ""));
+        if (/<(html|head|body|table|div|span|p|mj-|style)/i.test(b64)) return b64;
+      } catch {}
+    }
+    return decoded;
+  } catch {
+    return "";
+  }
+}
+
+export default function SendEmailButton({ tooltip = "Send email", icon }: SendEmailButtonProps) {
   const [open, setOpen] = useState(false);
+
   return (
     <>
-      <button
-        className={buttonClassName || "px-4 py-2 rounded-lg bg-black text-white"}
-        onClick={() => setOpen(true)}
-        title="Send Email"
-      >
-        {buttonLabel}
-      </button>
+      <Tooltip title={tooltip}>
+        <IconButton color="primary" onClick={() => setOpen(true)}>
+          {icon || <SendOutlined fontSize="small" />}
+        </IconButton>
+      </Tooltip>
 
-      {open && (
-        <SendEmailComposer
-          open={open}
-          onClose={() => setOpen(false)}
-          html={html}
-          defaultSubject={defaultSubject}
-        />
-      )}
+      <SendDialog open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
 
-// ----------------------------------------------
-// Inner modal: the Gmail-style composer UI
-// ----------------------------------------------
-function SendEmailComposer({
-  open,
-  onClose,
-  html,
-  defaultSubject,
-}: {
-  open: boolean;
-  onClose: () => void;
-  html: string;
-  defaultSubject?: string;
-}) {
+function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [loadingUser, setLoadingUser] = useState(false);
   const [user, setUser] = useState<UserResponse>({});
+
   const [fromName, setFromName] = useState("Inspire Youth NJ");
   const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
   const [replyTo, setReplyTo] = useState("members@inspireyouthnj.org");
-  const [subject, setSubject] = useState(defaultSubject || "");
+  const [subject, setSubject] = useState("");
   const [importance, setImportance] = useState<Importance>("Normal");
 
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
+  const [resolvedHtml, setResolvedHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Fetch current user
+  const [snack, setSnack] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  // Pull current user for personalized options
   useEffect(() => {
     if (!open) return;
     setLoadingUser(true);
@@ -93,7 +113,24 @@ function SendEmailComposer({
       .finally(() => setLoadingUser(false));
   }, [open]);
 
-  // Options for From Name
+  // Resolve HTML from the URL the moment dialog opens
+  useEffect(() => {
+    if (!open) return;
+    const html = resolveHtmlFromQuery();
+    setResolvedHtml(html || "");
+  }, [open]);
+
+  // Render preview into iframe
+  useEffect(() => {
+    if (!open || !iframeRef.current) return;
+    const doc = iframeRef.current.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(resolvedHtml || "");
+    doc.close();
+  }, [open, resolvedHtml]);
+
+  // From Name options
   const fromNameOptions = useMemo(() => {
     const opts = ["Inspire Youth NJ"];
     const ufn = (user?.fullName || "").trim();
@@ -106,44 +143,30 @@ function SendEmailComposer({
     return opts;
   }, [user]);
 
-  // Options for emails
+  // Email options (from, reply-to)
   const staticEmails = [
     "members@inspireyouthnj.org",
     "info@inspireyouthnj.org",
     "important-notifications@inspireyouthnj.org",
     "noreply@inspireyouthnj.org",
   ];
-
   const emailOptions = useMemo(() => {
     const opts = [...staticEmails];
     if (user?.email && !opts.includes(user.email)) opts.push(user.email);
     return opts;
   }, [user]);
 
-  // Keep reply-to synced with fromEmail (if same as default)
+  // Keep reply-to synced with fromEmail by default (unless user already changed it)
   useEffect(() => {
     if (!open) return;
     setReplyTo((prev) => (prev === fromEmail ? fromEmail : prev));
   }, [fromEmail, open]);
 
-  // Render email HTML in preview iframe
-  useEffect(() => {
-    if (!open || !iframeRef.current) return;
-    const doc = iframeRef.current.contentDocument;
-    if (!doc) return;
-    doc.open();
-    doc.write(html || "");
-    doc.close();
-  }, [open, html]);
-
-  // Handle Send
-  const onSend = async () => {
-    setError("");
-    setSuccess("");
-
-    if (!subject.trim()) return setError("Subject is required");
-    if (!fromEmail) return setError("From email is required");
-    if (!fromName) return setError("From name is required");
+  const handleSend = async () => {
+    if (!subject.trim()) return setSnack("Subject is required");
+    if (!fromEmail) return setSnack("From email is required");
+    if (!fromName) return setSnack("From name is required");
+    if (!resolvedHtml || !resolvedHtml.trim()) return setSnack("Email HTML is empty (expecting ?html= in URL)");
 
     setSending(true);
     try {
@@ -153,7 +176,7 @@ function SendEmailComposer({
         replyTo,
         subject,
         importance,
-        html,
+        html: resolvedHtml,
         user: { fullName: user?.fullName || null, email: user?.email || null },
         source: "iynj-emailbuilder",
       };
@@ -172,120 +195,141 @@ function SendEmailComposer({
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
 
-      setSuccess("Queued for sending");
-      // Optionally close after a delay:
-      // setTimeout(onClose, 1000);
+      setSnack("Queued for sending");
+      // Optionally close shortly after
+      // setTimeout(onClose, 900);
     } catch (e: any) {
-      setError(e?.message || "Failed to send");
+      setSnack(e?.message || "Failed to send");
     } finally {
       setSending(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="lg"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, bgcolor: "#f8f9fb", borderBottom: "1px solid #eaecef" }}>
+          New message
+        </DialogTitle>
 
-      {/* Composer card */}
-      <div className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl border overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-          <div className="font-semibold">New message</div>
-          <div className="flex items-center gap-2">
-            {error && <span className="text-red-600 text-sm">{error}</span>}
-            {success && <span className="text-green-600 text-sm">{success}</span>}
-            <button
-              onClick={onSend}
-              className="px-4 py-2 text-sm rounded-lg bg-black text-white disabled:opacity-50"
-              disabled={sending}
-            >
-              {sending ? "Sending…" : "Send"}
-            </button>
-            <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg border">
-              Close
-            </button>
-          </div>
-        </div>
+        <DialogContent dividers sx={{ p: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>From name</InputLabel>
+                <Select
+                  label="From name"
+                  value={fromName}
+                  onChange={(e) => setFromName(e.target.value)}
+                >
+                  {fromNameOptions.map((opt) => (
+                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-        {/* Fields */}
-        <div className="px-4 py-3 space-y-3 border-b">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label className="flex flex-col text-sm">
-              <span className="text-gray-600 mb-1">From name</span>
-              <select
-                className="border rounded-lg px-3 py-2"
-                value={fromName}
-                onChange={(e) => setFromName(e.target.value)}
-              >
-                {fromNameOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>From email</InputLabel>
+                <Select
+                  label="From email"
+                  value={fromEmail}
+                  onChange={(e) => setFromEmail(e.target.value)}
+                >
+                  {emailOptions.map((opt) => (
+                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <label className="flex flex-col text-sm">
-              <span className="text-gray-600 mb-1">From email</span>
-              <select
-                className="border rounded-lg px-3 py-2"
-                value={fromEmail}
-                onChange={(e) => setFromEmail(e.target.value)}
-              >
-                {emailOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Reply-To</InputLabel>
+                <Select
+                  label="Reply-To"
+                  value={replyTo}
+                  onChange={(e) => setReplyTo(e.target.value)}
+                >
+                  {emailOptions.map((opt) => (
+                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <label className="flex flex-col text-sm">
-              <span className="text-gray-600 mb-1">Reply-To</span>
-              <select
-                className="border rounded-lg px-3 py-2"
-                value={replyTo}
-                onChange={(e) => setReplyTo(e.target.value)}
-              >
-                {emailOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Importance</InputLabel>
+                <Select
+                  label="Importance"
+                  value={importance}
+                  onChange={(e) => setImportance(e.target.value as Importance)}
+                >
+                  <MenuItem value="Normal">Normal</MenuItem>
+                  <MenuItem value="High">High</MenuItem>
+                  <MenuItem value="Low">Low</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <label className="flex flex-col text-sm">
-              <span className="text-gray-600 mb-1">Importance</span>
-              <select
-                className="border rounded-lg px-3 py-2"
-                value={importance}
-                onChange={(e) => setImportance(e.target.value as Importance)}
-              >
-                <option>Normal</option>
-                <option>High</option>
-                <option>Low</option>
-              </select>
-            </label>
-          </div>
+            <Grid item xs={12} md={9}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </Grid>
 
-          <label className="flex flex-col text-sm">
-            <span className="text-gray-600 mb-1">Subject</span>
-            <input
-              className="border rounded-lg px-3 py-2"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Subject"
-            />
-          </label>
-        </div>
+            {/* Preview */}
+            <Grid item xs={12}>
+              {resolvedHtml ? (
+                <Paper variant="outlined" sx={{ height: 420, overflow: "hidden", borderRadius: 2 }}>
+                  <iframe
+                    ref={iframeRef}
+                    title="email-preview"
+                    style={{ width: "100%", height: "100%", border: 0 }}
+                  />
+                </Paper>
+              ) : (
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  No HTML found in the URL. This composer expects <code>?html=...</code> (or <code>?HTML=...</code>),
+                  same as your original redirect flow.
+                </Paper>
+              )}
+            </Grid>
+          </Grid>
+        </DialogContent>
 
-        {/* Preview */}
-        <div className="flex-1 overflow-auto bg-gray-25">
-          <iframe ref={iframeRef} title="email-preview" className="w-full h-full min-h-[300px]" />
-        </div>
-      </div>
-    </div>
+        <DialogActions sx={{ p: 2, bgcolor: "#f8f9fb", borderTop: "1px solid #eaecef" }}>
+          <Button onClick={onClose}>Close</Button>
+          <Button variant="contained" onClick={handleSend} disabled={sending}>
+            {sending ? "Sending…" : "Send"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={!!snack}
+        message={snack || ""}
+        autoHideDuration={5000}
+        onClose={() => setSnack(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      />
+    </>
   );
 }
