@@ -33,6 +33,7 @@ import MainTabsGroup from './MainTabsGroup';
 import ShortenButton from './ShortenButton';
 import SaveButton from './SaveButton';
 import SendButton from './SendButton';
+import SendComposer from './SendComposer';
 
 export default function TemplatePanel() {
   const document = useDocument();
