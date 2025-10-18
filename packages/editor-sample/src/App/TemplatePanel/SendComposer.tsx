@@ -1,5 +1,5 @@
 // ==============================================
-// File: /components/SendButton.tsx
+// File: /components/SendComposer.tsx
 // Combined: Send button + inline SendComposer modal in one file
 // ==============================================
 
@@ -9,7 +9,7 @@ export type Importance = "Normal" | "High" | "Low";
 
 interface UserResponse { fullName?: string; email?: string }
 
-interface SendButtonProps {
+interface SendComposerProps {
   html: string;              // the email HTML to preview/send
   defaultSubject?: string;   // optional default subject
   buttonClassName?: string;  // optional custom button styles
@@ -19,7 +19,7 @@ interface SendButtonProps {
 // Our API endpoint (server forwards to Make or sends email itself)
 const API_ENDPOINT = "/api/sendEmail.php";
 
-export default function SendButton({ html, defaultSubject, buttonClassName, buttonLabel = "Send" }: SendButtonProps) {
+export default function SendComposer({ html, defaultSubject, buttonClassName, buttonLabel = "Send" }: SendComposerProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
