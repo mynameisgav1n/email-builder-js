@@ -24,18 +24,44 @@ import SendIcon from "@mui/icons-material/Send";
 import { useDocument } from "../../documents/editor/EditorContext";
 import { renderToStaticMarkup } from "@usewaypoint/email-builder";
 
-// ----------------- types -----------------
 type Importance = "Normal" | "High" | "Low";
 interface UserResponse { fullName?: string; email?: string }
 
 type RecipientKind = "email" | "list";
 interface RecipientOption {
   kind: RecipientKind;
-  label: string;   // shown in chip/list
-  value: string;   // email or list key
+  label: string;   // shown in list/chip
+  value: string;   // email or list key (lowercased for emails)
+  email?: string;  // for email-kind suggestions we keep the raw email too
 }
 
-// Mail list keys mapped to your API `list` param
+const API_SEND  = "/api/sendEmail.php";
+const API_LISTS = "/api/getMailingLists.php";
+
+// --- Html helpers (same as your original SendButton) ---
+function minifyHTML(html: string) {
+  return html.replace(/\n/g, "")
+             .replace(/\s\s+/g, " ")
+             .replace(/>\s+</g, "><")
+             .replace(/<!--.*?-->/g, "");
+}
+function minimalEscape(str: string) {
+  return str.replace(/%/g, "%25")
+            .replace(/#/g, "%23")
+            .replace(/&/g, "%26")
+            .replace(/</g, "%3C")
+            .replace(/>/g, "%3E")
+            .replace(/"/g, "%22");
+}
+function decodeEscapedHtml(escaped: string) {
+  try {
+    const once = decodeURIComponent(escaped);
+    try { return decodeURIComponent(once); } catch { return once; }
+  } catch { return escaped; }
+}
+
+const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
 const MAILING_LISTS: { key: string; label: string }[] = [
   { key: "all",       label: "All Members" },
   { key: "general",   label: "General Emails" },
@@ -45,47 +71,21 @@ const MAILING_LISTS: { key: string; label: string }[] = [
   { key: "beehiiv",   label: "Newsletter Subscribers" },
 ];
 
-const API_SEND = "/api/sendEmail.php";
-const API_LISTS = "/api/getMailingLists.php";
-
-// ----------------- html helpers (same as your original) -----------------
-function minifyHTML(html: string) {
-  return html
-    .replace(/\n/g, "")
-    .replace(/\s\s+/g, " ")
-    .replace(/>\s+</g, "><")
-    .replace(/<!--.*?-->/g, "");
+function listOption(l: {key:string;label:string}): RecipientOption {
+  return { kind: "list", label: l.label, value: l.key };
 }
-function minimalEscape(str: string) {
-  return str
-    .replace(/%/g, "%25")
-    .replace(/#/g, "%23")
-    .replace(/&/g, "%26")
-    .replace(/</g, "%3C")
-    .replace(/>/g, "%3E")
-    .replace(/"/g, "%22");
+function emailOption(email: string, fullName?: string): RecipientOption {
+  const e = email.toLowerCase().trim();
+  const label = fullName ? `${fullName} (${e})` : e;
+  return { kind: "email", label, value: e, email: e };
 }
-function decodeEscapedHtml(escaped: string) {
-  try {
-    const once = decodeURIComponent(escaped);
-    try { return decodeURIComponent(once); } catch { return once; }
-  } catch {
-    return escaped;
-  }
+function useThisAddressOption(input: string): RecipientOption {
+  const e = input.toLowerCase().trim();
+  return { kind: "email", label: `Use this address: ${e}`, value: e, email: e };
 }
 
-const EMAIL_RE =
-  /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-
-// Build the option to “Use this address: …”
-function addressOption(input: string): RecipientOption {
-  return { kind: "email", label: input, value: input.toLowerCase() };
-}
-
-// ----------------- component -----------------
 export default function SendEmailButton() {
   const [open, setOpen] = useState(false);
-
   return (
     <>
       <Tooltip title="Send email">
@@ -93,7 +93,6 @@ export default function SendEmailButton() {
           <SendIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-
       {open && <ComposerDialog open={open} onClose={() => setOpen(false)} />}
     </>
   );
@@ -102,11 +101,11 @@ export default function SendEmailButton() {
 function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const document = useDocument();
 
-  // HTML pipeline (same tech as your old SendButton)
+  // HTML
   const [escapedHtml, setEscapedHtml] = useState("");
   const [resolvedHtml, setResolvedHtml] = useState("");
 
-  // user & from-fields
+  // user + headers
   const [user, setUser] = useState<UserResponse>({});
   const [fromName, setFromName] = useState("Inspire Youth NJ");
   const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
@@ -114,22 +113,22 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   const [subject, setSubject] = useState("");
   const [importance, setImportance] = useState<Importance>("Normal");
 
-  // recipients UI state
-  const [to, setTo] = useState<RecipientOption[]>([]);
-  const [cc, setCc] = useState<RecipientOption[]>([]);
+  // recipients
+  const [to,  setTo]  = useState<RecipientOption[]>([]);
+  const [cc,  setCc]  = useState<RecipientOption[]>([]);
   const [bcc, setBcc] = useState<RecipientOption[]>([]);
-  const [suggestions, setSuggestions] = useState<RecipientOption[]>([]); // emails & lists suggestions
+
+  // suggestions: ONLY people (emails) — lists are separate so we don’t duplicate
+  const [peopleSuggestions, setPeopleSuggestions] = useState<RecipientOption[]>([]);
 
   // misc
   const [snack, setSnack] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // --------- bootstrap when dialog opens ---------
+  // Build HTML
   useEffect(() => {
     if (!open) return;
-
-    // build html exactly like original
     try {
       const html = renderToStaticMarkup(document, { rootBlockId: "root" });
       const minified = minifyHTML(html);
@@ -140,68 +139,63 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     } catch {
       setSnack("Failed to render HTML.");
     }
+  }, [open, document]);
 
-    // fetch user
+  // User
+  useEffect(() => {
+    if (!open) return;
     fetch("/api/user.php")
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((u: UserResponse) => {
         setUser(u || {});
         if (u?.email) setReplyTo(u.email);
       })
-      .catch(() => { /* ignore */ });
+      .catch(() => {});
+  }, [open]);
 
-    // preload suggestions:
-    // - hard-coded mailing lists
-    // - a small sample of member emails (from All Members)
-    const base: RecipientOption[] = MAILING_LISTS.map(l => ({
-      kind: "list",
-      label: l.label,
-      value: l.key,
-    }));
-
-    // try pulling a sample of members to help autocomplete (if API is heavy, it's fine to remove)
+  // Suggestions: get *All Members* and show as "fullName (email)"
+  useEffect(() => {
+    if (!open) return;
     fetch(`${API_LISTS}?list=all`)
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
-        // Airtable returns {members:[{fullName,email,profileURL}], ...}
-        const emails: string[] =
-          data?.emails ??
-          (data?.members || []).map((m: any) => m.email).filter(Boolean);
-
-        const uniq = Array.from(new Set(emails)).slice(0, 200); // cap suggestions
-        const emailOpts: RecipientOption[] = uniq.map((e: string) => ({
-          kind: "email",
-          label: e,
-          value: e.toLowerCase(),
-        }));
-
-        setSuggestions([...base, ...emailOpts]);
+        // Prefer Airtable-style members [{fullName,email}], fallback to plain emails[]
+        const members: Array<{fullName?: string; email?: string}> = data?.members || [];
+        const emails: string[] = data?.emails || members.map(m => m.email).filter(Boolean);
+        const byEmail = new Map<string, RecipientOption>();
+        // If members exist, use fullName for nicer label
+        for (const m of members) {
+          const e = (m.email || "").trim();
+          if (!e) continue;
+          byEmail.set(e.toLowerCase(), emailOption(e, m.fullName));
+        }
+        // Add any email-only entries that weren't in members
+        for (const e of emails) {
+          const key = (e || "").toLowerCase();
+          if (!key) continue;
+          if (!byEmail.has(key)) byEmail.set(key, emailOption(key));
+        }
+        setPeopleSuggestions(Array.from(byEmail.values()));
       })
-      .catch(() => setSuggestions(base));
-  }, [open, document]);
+      .catch(() => setPeopleSuggestions([]));
+  }, [open]);
 
-  // render preview into iframe
+  // Preview
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
     if (!doc) return;
-    doc.open();
-    doc.write(resolvedHtml || "");
-    doc.close();
+    doc.open(); doc.write(resolvedHtml || ""); doc.close();
   }, [open, resolvedHtml]);
 
-  // From name options
+  // Select options
   const fromNameOptions = useMemo(() => {
     const opts = ["Inspire Youth NJ"];
     const ufn = (user?.fullName || "").trim();
-    if (ufn) {
-      opts.push(`${ufn} (Inspire Youth NJ)`);
-      opts.push(ufn);
-    }
+    if (ufn) { opts.push(`${ufn} (Inspire Youth NJ)`); opts.push(ufn); }
     return opts;
   }, [user]);
 
-  // From/Reply-To options
   const emailOptions = useMemo(() => {
     const staticEmails = [
       "members@inspireyouthnj.org",
@@ -209,94 +203,84 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       "important-notifications@inspireyouthnj.org",
       "noreply@inspireyouthnj.org",
     ];
-    const opts = [...staticEmails];
-    if (user?.email && !opts.includes(user.email)) opts.push(user.email);
-    return opts;
+    const out = [...staticEmails];
+    if (user?.email && !out.includes(user.email)) out.push(user.email);
+    return out;
   }, [user]);
 
-  // keep reply-to in sync unless user already changed it
   useEffect(() => {
     if (!open) return;
     setReplyTo(prev => (prev === fromEmail ? fromEmail : prev));
   }, [fromEmail, open]);
 
-  // ------- utilities -------
-  const asEmails = (arr: RecipientOption[]) =>
-    arr.filter(r => r.kind === "email").map(r => r.value.toLowerCase());
+  // Lists (separate so they appear once at the top)
+  const listOptions = useMemo(
+    () => MAILING_LISTS.map(listOption),
+    []
+  );
 
-  const selectedListKeys = (arr: RecipientOption[]) =>
-    arr.filter(r => r.kind === "list").map(r => r.value);
+  // Combine options for "To": lists first, then people suggestions
+  const toOptions = useMemo(
+    () => [...listOptions, ...peopleSuggestions],
+    [listOptions, peopleSuggestions]
+  );
 
-  async function expandList(key: string): Promise<string[]> {
-    // Maps list key to API calls
-    const listParam = key; // keys already match our API
-    const url = `${API_LISTS}?list=${encodeURIComponent(listParam)}`;
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`List fetch failed: ${key}`);
-    const data = await r.json();
-    if (key === "beehiiv") {
-      // {emails: [...]}
-      return (data?.emails || []).map((e: string) => e.toLowerCase());
-    }
-    // airtable => {members:[{email,...}]}
-    const mems = (data?.members || []) as Array<{ email?: string }>;
-    return mems.map(m => (m.email || "").toLowerCase()).filter(Boolean);
-  }
+  // Make equality stable so duplicates don’t appear
+  const isOptionEqualToValue = (a: RecipientOption, b: RecipientOption) =>
+    a.kind === b.kind && a.value.toLowerCase() === b.value.toLowerCase();
 
-  async function expandRecipients(arr: RecipientOption[]): Promise<string[]> {
-    const emails = new Set<string>(asEmails(arr));
-    const lists = selectedListKeys(arr);
-    for (const key of lists) {
-      try {
-        const listEmails = await expandList(key);
-        listEmails.forEach(e => emails.add(e));
-      } catch {
-        // swallow and continue; we'll still send to what we have
-      }
-    }
-    return Array.from(emails);
-  }
-
-  // ------- autocomplete config -------
+  // Filter: put “Use this address” on top when typing a valid email
   function filterOptions(options: RecipientOption[], state: any) {
     const input = (state.inputValue || "").trim();
-    let out = options;
-
-    // Show “Use this address” suggestion when input looks like an email
     if (EMAIL_RE.test(input)) {
-      out = [
-        { kind: "email", label: `Use this address: ${input}`, value: input.toLowerCase() },
-        ...options.filter(o => o.value !== input.toLowerCase()),
-      ];
+      const useAddr = useThisAddressOption(input);
+      // Keep lists at the very top, then the “Use this address…”, then other suggestions (deduped)
+      const rest = options.filter(o => !(o.kind === "email" && o.value === useAddr.value));
+      return [...listOptions, useAddr, ...rest];
     }
-    return out;
+    return options;
   }
 
+  // Normalize chips on change (freeSolo strings -> email chips), dedupe
   function onChangeRecipients(
     _e: any,
     value: (RecipientOption | string)[],
     setState: React.Dispatch<React.SetStateAction<RecipientOption[]>>
   ) {
-    // Allow free text emails and list options
     const normalized: RecipientOption[] = value.map(v => {
-      if (typeof v === "string") {
-        // freeSolo typed; if it's an email, store email; otherwise ignore
-        if (EMAIL_RE.test(v.trim())) return addressOption(v.trim());
-        return addressOption(v.trim()); // still store; backend will re-validate
-      }
+      if (typeof v === "string") return emailOption(v);
       if (v.kind === "email" && v.label.startsWith("Use this address:")) {
-        const email = v.value;
-        return addressOption(email);
+        return emailOption(v.value);
       }
-      return v as RecipientOption;
+      return v;
     });
-
-    // de-dupe by value
-    const uniqMap = new Map(normalized.map(n => [n.kind + ":" + n.value.toLowerCase(), n]));
-    setState(Array.from(uniqMap.values()));
+    const uniq = new Map(
+      normalized.map(n => [n.kind + ":" + n.value.toLowerCase(), n])
+    );
+    setState(Array.from(uniq.values()));
   }
 
-  // ------- send -------
+  async function expandList(key: string): Promise<string[]> {
+    const r = await fetch(`${API_LISTS}?list=${encodeURIComponent(key)}`);
+    if (!r.ok) throw new Error(`List fetch failed: ${key}`);
+    const data = await r.json();
+    if (key === "beehiiv") {
+      return (data?.emails || []).map((e: string) => e.toLowerCase());
+    }
+    const mems = (data?.members || []) as Array<{email?: string}>;
+    return mems.map(m => (m.email || "").toLowerCase()).filter(Boolean);
+  }
+  async function expandRecipients(arr: RecipientOption[]) {
+    const emails = new Set<string>(arr.filter(r => r.kind === "email").map(r => r.value.toLowerCase()));
+    const lists  = arr.filter(r => r.kind === "list").map(r => r.value);
+    for (const key of lists) {
+      try {
+        (await expandList(key)).forEach(e => emails.add(e));
+      } catch { /* ignore individual list errors */ }
+    }
+    return Array.from(emails);
+  }
+
   const onSend = async () => {
     if (!subject.trim()) return setSnack("Subject is required");
     if (!fromEmail) return setSnack("From email is required");
@@ -308,11 +292,10 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     try {
       const [toEmails, ccEmails, bccEmails] = await Promise.all([
         expandRecipients(to),
-        Promise.resolve(asEmails(cc)),   // CC/BCC accept emails only here
-        Promise.resolve(asEmails(bcc)),
+        Promise.resolve(cc.filter(r => r.kind === "email").map(r => r.value.toLowerCase())),
+        Promise.resolve(bcc.filter(r => r.kind === "email").map(r => r.value.toLowerCase())),
       ]);
 
-      // final dedupe across all (leave duplicates across fields? usually we dedupe per-field)
       const dedupe = (xs: string[]) => Array.from(new Set(xs.map(x => x.toLowerCase())));
       const payload = {
         fromName,
@@ -324,10 +307,9 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
         to: dedupe(toEmails),
         cc: dedupe(ccEmails),
         bcc: dedupe(bccEmails),
-        selectedLists: selectedListKeys(to),
+        selectedLists: to.filter(r => r.kind === "list").map(r => r.value),
         user: { fullName: user?.fullName || null, email: user?.email || null },
         source: "iynj-emailbuilder",
-        // keep for debug parity with old flow
         escapedHtml,
       };
 
@@ -336,14 +318,12 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         const t = await res.text();
         throw new Error(`API returned ${res.status}: ${t}`);
       }
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
-
       setSnack("Queued for sending");
       // setTimeout(onClose, 900);
     } catch (e: any) {
@@ -353,13 +333,9 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     }
   };
 
-  // ----------------- UI -----------------
+  // Common styles
   const fieldSx = { "& .MuiInputBase-root": { borderRadius: 2 } };
-
-  const listOptions: RecipientOption[] = useMemo(
-    () => MAILING_LISTS.map(l => ({ kind: "list", label: l.label, value: l.key })),
-    []
-  );
+  const grayChipSx = { bgcolor: "#e5e7eb", color: "#111827" }; // gray-200 / gray-900
 
   return (
     <>
@@ -375,14 +351,15 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 2 }}>
-          {/* Stacked like an email client */}
+          {/* Stacked fields like a mail client */}
           <Box sx={{ display: "grid", gap: 1.25 }}>
-            {/* To */}
+            {/* To (lists first, then people; no duplicates) */}
             <Autocomplete
               multiple
               freeSolo
+              options={toOptions}
               filterOptions={filterOptions as any}
-              options={[...listOptions, ...suggestions]}
+              isOptionEqualToValue={isOptionEqualToValue}
               value={to}
               onChange={(e, v) => onChangeRecipients(e, v, setTo)}
               getOptionLabel={(o) => (typeof o === "string" ? o : o.label)}
@@ -392,9 +369,10 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
                     {...getTagProps({ index })}
                     key={option.kind + ":" + option.value}
                     label={option.label}
-                    color={option.kind === "list" ? "secondary" : "default"}
-                    variant={option.kind === "list" ? "filled" : "outlined"}
+                    color="default"
+                    variant="filled"
                     size="small"
+                    sx={grayChipSx}
                   />
                 ))
               }
@@ -407,14 +385,22 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <Autocomplete
               multiple
               freeSolo
-              filterOptions={filterOptions as any}
-              options={suggestions.filter(o => o.kind === "email")}
+              options={peopleSuggestions}
+              isOptionEqualToValue={isOptionEqualToValue}
               value={cc}
               onChange={(e, v) => onChangeRecipients(e, v, setCc)}
               getOptionLabel={(o) => (typeof o === "string" ? o : o.label)}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip {...getTagProps({ index })} key={"cc:"+option.value} label={option.label} size="small" />
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={"cc:"+option.value}
+                    label={option.label}
+                    color="default"
+                    variant="filled"
+                    size="small"
+                    sx={grayChipSx}
+                  />
                 ))
               }
               renderInput={(params) => (
@@ -426,14 +412,22 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <Autocomplete
               multiple
               freeSolo
-              filterOptions={filterOptions as any}
-              options={suggestions.filter(o => o.kind === "email")}
+              options={peopleSuggestions}
+              isOptionEqualToValue={isOptionEqualToValue}
               value={bcc}
               onChange={(e, v) => onChangeRecipients(e, v, setBcc)}
               getOptionLabel={(o) => (typeof o === "string" ? o : o.label)}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip {...getTagProps({ index })} key={"bcc:"+option.value} label={option.label} size="small" />
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={"bcc:"+option.value}
+                    label={option.label}
+                    color="default"
+                    variant="filled"
+                    size="small"
+                    sx={grayChipSx}
+                  />
                 ))
               }
               renderInput={(params) => (
@@ -455,9 +449,8 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <FormControl size="small">
               <InputLabel>From email</InputLabel>
               <Select label="From email" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}>
-                {emailOptions.map((opt) => (
-                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                ))}
+                {([ "members@inspireyouthnj.org","info@inspireyouthnj.org","important-notifications@inspireyouthnj.org","noreply@inspireyouthnj.org", user?.email ].filter(Boolean) as string[])
+                  .map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </Select>
             </FormControl>
 
@@ -465,29 +458,18 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <FormControl size="small">
               <InputLabel>Reply-To</InputLabel>
               <Select label="Reply-To" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}>
-                {emailOptions.map((opt) => (
-                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                ))}
+                {([ "members@inspireyouthnj.org","info@inspireyouthnj.org","important-notifications@inspireyouthnj.org","noreply@inspireyouthnj.org", user?.email ].filter(Boolean) as string[])
+                  .map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </Select>
             </FormControl>
 
             {/* Subject */}
-            <TextField
-              size="small"
-              label="Subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              sx={fieldSx}
-            />
+            <TextField size="small" label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} sx={fieldSx} />
 
             {/* Importance */}
             <FormControl size="small">
               <InputLabel>Importance</InputLabel>
-              <Select
-                label="Importance"
-                value={importance}
-                onChange={(e) => setImportance(e.target.value as Importance)}
-              >
+              <Select label="Importance" value={importance} onChange={(e) => setImportance(e.target.value as Importance)}>
                 <MenuItem value="Normal">Normal</MenuItem>
                 <MenuItem value="High">High</MenuItem>
                 <MenuItem value="Low">Low</MenuItem>
