@@ -1,16 +1,3 @@
-// ==============================================
-// File: /components/SendEmailButton.tsx
-// Purpose: MUI IconButton that opens a Gmail-style composer Dialog.
-//          HTML is auto-resolved from the URL (?html= or ?HTML=).
-//          On Send, POSTs JSON to /api/sendEmail.php.
-//
-// Usage:
-//   <SendEmailButton />
-//
-// If your original SendButton used a different icon, replace SendOutlined below,
-// or pass a custom icon via the `icon` prop.
-// ==============================================
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   IconButton,
@@ -26,85 +13,114 @@ import {
   Select,
   MenuItem,
   Snackbar,
-  Box,
   Grid,
   Paper,
 } from "@mui/material";
-import { SendOutlined } from "@mui/icons-material"; // swap to your original icon if different
+import SendIcon from "@mui/icons-material/Send";
+
+import { useDocument } from "../../documents/editor/EditorContext";
+import { renderToStaticMarkup } from "@usewaypoint/email-builder";
 
 type Importance = "Normal" | "High" | "Low";
-interface UserResponse { fullName?: string; email?: string }
-
-interface SendEmailButtonProps {
-  tooltip?: string;
-  icon?: React.ReactNode; // if you want to inject the exact icon from your current SendButton
+interface UserResponse {
+  fullName?: string;
+  email?: string;
 }
 
 const API_ENDPOINT = "/api/sendEmail.php";
 
-// Robustly decode ?html= (or ?HTML=), handling double-encoding and potential base64
-function resolveHtmlFromQuery(): string {
+// --- same minify + minimalEscape logic from your original code ---
+function minifyHTML(html: string) {
+  return html
+    .replace(/\n/g, "")
+    .replace(/\s\s+/g, " ")
+    .replace(/>\s+</g, "><")
+    .replace(/<!--.*?-->/g, "");
+}
+function minimalEscape(str: string) {
+  return str
+    .replace(/%/g, "%25")
+    .replace(/#/g, "%23")
+    .replace(/&/g, "%26")
+    .replace(/</g, "%3C")
+    .replace(/>/g, "%3E")
+    .replace(/"/g, "%22");
+}
+function decodeEscapedHtml(escaped: string) {
   try {
-    const sp = new URLSearchParams(window.location.search);
-    let raw = sp.get("html") ?? sp.get("HTML");
-    if (!raw) return "";
-
-    let decoded = "";
-    try { decoded = decodeURIComponent(raw); } catch { decoded = raw; }
-    try { decoded = decodeURIComponent(decoded); } catch {}
-
-    const looksLikeHtml = /<(!doctype|html|head|body|table|div|span|p|mj-|style)/i.test(decoded);
-    const looksLikeBase64 = /^[A-Za-z0-9+/=\s]+$/.test(decoded) && decoded.length % 4 === 0;
-    if (!looksLikeHtml && looksLikeBase64) {
-      try {
-        const b64 = atob(decoded.replace(/\s+/g, ""));
-        if (/<(html|head|body|table|div|span|p|mj-|style)/i.test(b64)) return b64;
-      } catch {}
+    const once = decodeURIComponent(escaped);
+    try {
+      return decodeURIComponent(once);
+    } catch {
+      return once;
     }
-    return decoded;
   } catch {
-    return "";
+    return escaped;
   }
 }
 
-export default function SendEmailButton({ tooltip = "Send email", icon }: SendEmailButtonProps) {
+export default function SendEmailButton() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Tooltip title={tooltip}>
+      <Tooltip title="Send email">
         <IconButton color="primary" onClick={() => setOpen(true)}>
-          {icon || <SendOutlined fontSize="small" />}
+          <SendIcon fontSize="small" />
         </IconButton>
       </Tooltip>
 
-      <SendDialog open={open} onClose={() => setOpen(false)} />
+      {open && <SendComposerDialog open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SendComposerDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const document = useDocument();
+  const [escapedHtml, setEscapedHtml] = useState<string>("");
+  const [resolvedHtml, setResolvedHtml] = useState<string>("");
+
   const [loadingUser, setLoadingUser] = useState(false);
   const [user, setUser] = useState<UserResponse>({});
-
   const [fromName, setFromName] = useState("Inspire Youth NJ");
   const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
   const [replyTo, setReplyTo] = useState("members@inspireyouthnj.org");
   const [subject, setSubject] = useState("");
   const [importance, setImportance] = useState<Importance>("Normal");
 
-  const [resolvedHtml, setResolvedHtml] = useState<string>("");
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
   const [snack, setSnack] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Pull current user for personalized options
+  // Generate HTML using same logic as original SendButton
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const html = renderToStaticMarkup(document, { rootBlockId: "root" });
+      const minified = minifyHTML(html);
+      const escaped = minimalEscape(minified);
+      const decoded = decodeEscapedHtml(escaped);
+      setEscapedHtml(escaped);
+      setResolvedHtml(decoded);
+    } catch (e) {
+      setSnack("Failed to render HTML.");
+    }
+  }, [open, document]);
+
+  // Load user info
   useEffect(() => {
     if (!open) return;
     setLoadingUser(true);
     fetch("/api/user.php")
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to load user"))))
+      .then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error("Failed to load user"))
+      )
       .then((data: UserResponse) => {
         setUser(data || {});
         if (data?.email) setReplyTo(data.email);
@@ -113,14 +129,7 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
       .finally(() => setLoadingUser(false));
   }, [open]);
 
-  // Resolve HTML from the URL the moment dialog opens
-  useEffect(() => {
-    if (!open) return;
-    const html = resolveHtmlFromQuery();
-    setResolvedHtml(html || "");
-  }, [open]);
-
-  // Render preview into iframe
+  // Render email preview
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
@@ -130,33 +139,29 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
     doc.close();
   }, [open, resolvedHtml]);
 
-  // From Name options
+  // Dropdown options
   const fromNameOptions = useMemo(() => {
     const opts = ["Inspire Youth NJ"];
     const ufn = (user?.fullName || "").trim();
     if (ufn) {
       opts.push(`${ufn} (Inspire Youth NJ)`);
       opts.push(ufn);
-    } else {
-      opts.push("Full Name (Inspire Youth NJ)");
     }
     return opts;
   }, [user]);
 
-  // Email options (from, reply-to)
-  const staticEmails = [
-    "members@inspireyouthnj.org",
-    "info@inspireyouthnj.org",
-    "important-notifications@inspireyouthnj.org",
-    "noreply@inspireyouthnj.org",
-  ];
   const emailOptions = useMemo(() => {
+    const staticEmails = [
+      "members@inspireyouthnj.org",
+      "info@inspireyouthnj.org",
+      "important-notifications@inspireyouthnj.org",
+      "noreply@inspireyouthnj.org",
+    ];
     const opts = [...staticEmails];
     if (user?.email && !opts.includes(user.email)) opts.push(user.email);
     return opts;
   }, [user]);
 
-  // Keep reply-to synced with fromEmail by default (unless user already changed it)
   useEffect(() => {
     if (!open) return;
     setReplyTo((prev) => (prev === fromEmail ? fromEmail : prev));
@@ -166,7 +171,7 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
     if (!subject.trim()) return setSnack("Subject is required");
     if (!fromEmail) return setSnack("From email is required");
     if (!fromName) return setSnack("From name is required");
-    if (!resolvedHtml || !resolvedHtml.trim()) return setSnack("Email HTML is empty (expecting ?html= in URL)");
+    if (!resolvedHtml.trim()) return setSnack("Email HTML is empty");
 
     setSending(true);
     try {
@@ -179,6 +184,7 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
         html: resolvedHtml,
         user: { fullName: user?.fullName || null, email: user?.email || null },
         source: "iynj-emailbuilder",
+        escapedHtml, // for debugging/Make-compatibility
       };
 
       const res = await fetch(API_ENDPOINT, {
@@ -196,8 +202,6 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
 
       setSnack("Queued for sending");
-      // Optionally close shortly after
-      // setTimeout(onClose, 900);
     } catch (e: any) {
       setSnack(e?.message || "Failed to send");
     } finally {
@@ -213,13 +217,16 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
         fullWidth
         maxWidth="lg"
         PaperProps={{
-          sx: {
-            borderRadius: 3,
-            overflow: "hidden",
-          },
+          sx: { borderRadius: 3, overflow: "hidden" },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, bgcolor: "#f8f9fb", borderBottom: "1px solid #eaecef" }}>
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            bgcolor: "#f8f9fb",
+            borderBottom: "1px solid #eaecef",
+          }}
+        >
           New message
         </DialogTitle>
 
@@ -234,7 +241,9 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
                   onChange={(e) => setFromName(e.target.value)}
                 >
                   {fromNameOptions.map((opt) => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                    <MenuItem key={opt} value={opt}>
+                      {opt}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -249,7 +258,9 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
                   onChange={(e) => setFromEmail(e.target.value)}
                 >
                   {emailOptions.map((opt) => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                    <MenuItem key={opt} value={opt}>
+                      {opt}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -264,7 +275,9 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
                   onChange={(e) => setReplyTo(e.target.value)}
                 >
                   {emailOptions.map((opt) => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                    <MenuItem key={opt} value={opt}>
+                      {opt}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -295,10 +308,13 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
               />
             </Grid>
 
-            {/* Preview */}
+            {/* HTML Preview */}
             <Grid item xs={12}>
               {resolvedHtml ? (
-                <Paper variant="outlined" sx={{ height: 420, overflow: "hidden", borderRadius: 2 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ height: 420, overflow: "hidden", borderRadius: 2 }}
+                >
                   <iframe
                     ref={iframeRef}
                     title="email-preview"
@@ -307,15 +323,20 @@ function SendDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
                 </Paper>
               ) : (
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  No HTML found in the URL. This composer expects <code>?html=...</code> (or <code>?HTML=...</code>),
-                  same as your original redirect flow.
+                  Unable to render preview from builder document.
                 </Paper>
               )}
             </Grid>
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2, bgcolor: "#f8f9fb", borderTop: "1px solid #eaecef" }}>
+        <DialogActions
+          sx={{
+            p: 2,
+            bgcolor: "#f8f9fb",
+            borderTop: "1px solid #eaecef",
+          }}
+        >
           <Button onClick={onClose}>Close</Button>
           <Button variant="contained" onClick={handleSend} disabled={sending}>
             {sending ? "Sending…" : "Send"}
