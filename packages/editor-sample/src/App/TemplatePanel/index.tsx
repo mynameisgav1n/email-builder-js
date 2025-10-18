@@ -144,6 +144,7 @@ export default function TemplatePanel() {
             <ShortenButton />
             <SaveButton />
             <SendButton />
+            <SendComposer />
           </Stack>
         </Stack>
         <ToggleInspectorPanelButton />
