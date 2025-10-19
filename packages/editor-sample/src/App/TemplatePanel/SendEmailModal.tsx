@@ -221,14 +221,14 @@ function ComposerDialog({
     return opts;
   }, [user]);
 
-  // From email menu: values stay pure emails. Keep your Outlook label value as-is.
+  // From email menu
   const fromEmailChoices = useMemo(() => {
     const base = [
       { value: "members@inspireyouthnj.org", label: "members@inspireyouthnj.org" },
       { value: "info@inspireyouthnj.org", label: "info@inspireyouthnj.org" },
       { value: "important-notifications@inspireyouthnj.org", label: "important-notifications@inspireyouthnj.org" },
       { value: "noreply@inspireyouthnj.org", label: "noreply@inspireyouthnj.org" },
-      {/*{ value: "SendFromOutlook-noreply@inspireyouthnj.org", label: "Send from Outlook (noreply@inspireyouthnj.org)" },*/}
+      //{ value: "SendFromOutlook-noreply@inspireyouthnj.org", label: "Send from Outlook (noreply@inspireyouthnj.org)" },
       { value: "hugs@inspireyouthnj.org", label: "hugs@inspireyouthnj.org" },
       { value: "dehugs@iyusa.org", label: "dehugs@iyusa.org" },
     ];
