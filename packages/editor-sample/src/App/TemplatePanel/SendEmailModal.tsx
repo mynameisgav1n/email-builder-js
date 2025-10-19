@@ -13,7 +13,6 @@ import {
   Select,
   MenuItem,
   Snackbar,
-  Grid,
   Paper,
   Chip,
   Autocomplete,
@@ -33,7 +32,7 @@ type RecipientKind = "email" | "list";
 interface RecipientOption {
   kind: RecipientKind;
   label: string;   // shown in UI: "Full Name (email)" or "All Members"
-  value: string;   // unique key: email or list key (lowercase for email)
+  value: string;   // unique key: email (lowercased) or list key
   email?: string;  // raw email (for kind === "email")
 }
 
@@ -98,7 +97,7 @@ const defaultFilter = createFilterOptions<RecipientOption>({
 });
 
 // ===================================================================
-// Exported component: IconButton + Modal (kept self-contained)
+// Exported component: IconButton + Modal (self-contained)
 // ===================================================================
 export default function SendEmailModal() {
   const [open, setOpen] = useState(false);
@@ -130,8 +129,8 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   const [user, setUser] = useState<UserResponse>({});
   const [fromName, setFromName] = useState("Inspire Youth NJ");
   const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
-  const [replyTo, setReplyTo] = useState("members@inspireyouthnj.org");
-  const [subject, setSubject] = useState("");
+  const [replyTo, setReplyTo]     = useState("members@inspireyouthnj.org");
+  const [subject, setSubject]     = useState("");
   const [importance, setImportance] = useState<Importance>("Normal");
 
   // recipients
@@ -174,21 +173,31 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => {});
   }, [open]);
 
-  // Load All Members -> suggestions as "Full Name (email)"
+  // Load All Members -> suggestions as "Full Name (email)" (case-insensitive Email/email)
   useEffect(() => {
     if (!open) return;
     fetch(`${API_LISTS}?list=all`)
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
-        const members: Array<{fullName?: string; email?: string}> = data?.members || [];
-        const emails: string[] = data?.emails || members.map(m => m.Email).filter(Boolean);
+        const members: Array<Record<string, any>> = data?.members || [];
+        const emailsFromMembers = members
+          .map((m) => (m.email || m.Email || m.EMAIL || "").trim())
+          .filter(Boolean);
+
+        const emailsArray: string[] =
+          (Array.isArray(data?.emails) && data.emails.length)
+            ? data.emails
+            : emailsFromMembers;
+
         const byEmail = new Map<string, RecipientOption>();
+
         for (const m of members) {
-          const e = (m.Email || "").trim();
+          const e = (m.email || m.Email || m.EMAIL || "").trim();
           if (!e) continue;
-          byEmail.set(e.toLowerCase(), emailOption(e, m.fullName));
+          const fn = m.fullName || m.FullName || m.name || m.Name || "";
+          byEmail.set(e.toLowerCase(), emailOption(e, fn));
         }
-        for (const e of emails) {
+        for (const e of emailsArray) {
           const key = (e || "").toLowerCase();
           if (!key) continue;
           if (!byEmail.has(key)) byEmail.set(key, emailOption(key));
@@ -198,7 +207,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => setPeopleSuggestions([]));
   }, [open]);
 
-  // Render preview
+  // Render preview in iframe
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
@@ -234,7 +243,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
 
   // Options for To field: lists (once) + people suggestions
   const listOptions = useMemo(() => MAILING_LISTS.map(listOption), []);
-  const toOptions = useMemo(() => [...listOptions, ...peopleSuggestions], [listOptions, peopleSuggestions]);
+  const toOptions   = useMemo(() => [...listOptions, ...peopleSuggestions], [listOptions, peopleSuggestions]);
 
   const isOptionEqualToValue = (a: RecipientOption, b: RecipientOption) =>
     a.kind === b.kind && a.value.toLowerCase() === b.value.toLowerCase();
@@ -242,18 +251,15 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   // --- smarter filtering for To ---
   function filterToOptions(_options: RecipientOption[], state: { inputValue: string }) {
     const input = (state.inputValue || "").trim();
-
-    // people filtered by name/email
     const peopleFiltered = defaultFilter(peopleSuggestions, state);
 
-    // typing: show people; include lists only if they match text
     if (input.length > 0) {
       const matchingLists = listOptions.filter((l) =>
         l.label.toLowerCase().includes(input.toLowerCase())
       );
       const emailPrompt = EMAIL_RE.test(input) ? [useThisAddressOption(input)] : [];
 
-      // dedupe while preserving order
+      // de-dupe while preserving order
       const seen = new Set<string>();
       const result = [...matchingLists, ...emailPrompt, ...peopleFiltered].filter(o => {
         const k = o.kind + ":" + o.value.toLowerCase();
@@ -264,7 +270,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       return result;
     }
 
-    // empty input: lists first, then people (unique)
+    // empty input: lists first, then people
     const seen = new Set<string>();
     return [...listOptions, ...peopleFiltered].filter(o => {
       const k = o.kind + ":" + o.value.toLowerCase();
@@ -274,7 +280,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     });
   }
 
-  // normalize chips, allow freeSolo emails, dedupe
+  // normalize chips (freeSolo → email), dedupe
   function onChangeRecipients(
     _e: any,
     value: (RecipientOption | string)[],
@@ -289,56 +295,36 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     setState(Array.from(uniq.values()));
   }
 
-  // expand list(s) to emails via API
-  async function expandList(key: string): Promise<string[]> {
-    const r = await fetch(`${API_LISTS}?list=${encodeURIComponent(key)}`);
-    if (!r.ok) throw new Error(`List fetch failed: ${key}`);
-    const data = await r.json();
-    if (key === "beehiiv") return (data?.emails || []).map((e: string) => e.toLowerCase());
-    const mems = (data?.members || []) as Array<{email?: string}>;
-    return mems.map(m => (m.email || "").toLowerCase()).filter(Boolean);
-  }
-  async function expandRecipients(arr: RecipientOption[]) {
-    const emails = new Set<string>(arr.filter(r => r.kind === "email").map(r => r.value.toLowerCase()));
-    const lists  = arr.filter(r => r.kind === "list").map(r => r.value);
-    for (const key of lists) {
-      try { (await expandList(key)).forEach(e => emails.add(e)); } catch {}
-    }
-    return Array.from(emails);
-  }
-
   // send
   const onSend = async () => {
     if (!subject.trim()) return setSnack("Subject is required");
-    if (!fromEmail) return setSnack("From email is required");
-    if (!fromName) return setSnack("From name is required");
+    if (!fromEmail)      return setSnack("From email is required");
+    if (!fromName)       return setSnack("From name is required");
     if (!resolvedHtml.trim()) return setSnack("Email HTML is empty");
     if (to.length === 0) return setSnack("Please add at least one recipient in To");
 
     setSending(true);
     try {
-      const [toEmails, ccEmails, bccEmails] = await Promise.all([
-        expandRecipients(to),
-        Promise.resolve(cc.filter(r => r.kind === "email").map(r => r.value.toLowerCase())),
-        Promise.resolve(bcc.filter(r => r.kind === "email").map(r => r.value.toLowerCase())),
-      ]);
+      // Build arrays of plain emails only (no names), as requested
+      const toEmails  = to.filter(x => x.kind === "email").map(x => x.value);
+      const ccEmails  = cc.filter(x => x.kind === "email").map(x => x.value);
+      const bccEmails = bcc.filter(x => x.kind === "email").map(x => x.value);
+      const listKeys  = to.filter(x => x.kind === "list").map(x => x.value);
 
-      const dedupe = (xs: string[]) => Array.from(new Set(xs.map(x => x.toLowerCase())));
+      // Preserve the exact chip order for the API to reconstruct "memberX first"
+      const toSequence = to.map(x => ({ kind: x.kind, value: x.value }));
 
       const payload = {
-        fromName,
-        fromEmail,
-        replyTo,
-        subject,
-        importance,
+        fromName, fromEmail, replyTo, subject, importance,
         html: resolvedHtml,
-        to: dedupe(toEmails),
-        cc: dedupe(ccEmails),
-        bcc: dedupe(bccEmails),
-        selectedLists: to.filter(r => r.kind === "list").map(r => r.value),
+        to: toEmails,
+        cc: ccEmails,
+        bcc: bccEmails,
+        selectedLists: listKeys,
+        toSequence,                            // <— order preservation
         user: { fullName: user?.fullName || null, email: user?.email || null },
         source: "iynj-emailbuilder",
-        escapedHtml,
+        escapedHtml,                           // optional debug parity
       };
 
       const res = await fetch(API_SEND, {
@@ -350,7 +336,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
 
-      setSnack("Queued for sending");
+      setSnack(`Queued ${data?.sent ?? 1} send(s)`);
       // setTimeout(onClose, 900);
     } catch (e: any) {
       setSnack(e?.message || "Failed to send");
