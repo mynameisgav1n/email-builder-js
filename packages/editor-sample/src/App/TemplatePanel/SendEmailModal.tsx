@@ -211,7 +211,7 @@ function ComposerDialog({
 
   // From name choices (now includes Healing Hugs variants)
   const fromNameOptions = useMemo(() => {
-    const opts = ["Inspire Youth NJ", "Healing Hugs"];
+    const opts = ["Inspire Youth NJ", "Inspire Youth NJ Important Notifications", "Healing Hugs", "Executive Team", "Technology Team"];
     const ufn = (user?.fullName || "").trim();
     if (ufn) {
       opts.push(`${ufn} (Inspire Youth NJ)`);
@@ -228,6 +228,8 @@ function ComposerDialog({
       { value: "info@inspireyouthnj.org", label: "info@inspireyouthnj.org" },
       { value: "important-notifications@inspireyouthnj.org", label: "important-notifications@inspireyouthnj.org" },
       { value: "noreply@inspireyouthnj.org", label: "noreply@inspireyouthnj.org" },
+      { value: "executives@inspireyouthnj.org", label: "executives@inspireyouthnj.org" },
+      { value: "tech@inspireyouthnj.org", label: "tech@inspireyouthnj.org" },
       //{ value: "SendFromOutlook-noreply@inspireyouthnj.org", label: "Send from Outlook (noreply@inspireyouthnj.org)" },
       { value: "hugs@inspireyouthnj.org", label: "hugs@inspireyouthnj.org" },
       { value: "dehugs@iyusa.org", label: "dehugs@iyusa.org" },
