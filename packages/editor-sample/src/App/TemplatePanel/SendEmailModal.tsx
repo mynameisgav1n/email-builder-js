@@ -24,19 +24,16 @@ import SendIcon from "@mui/icons-material/Send";
 import { useDocument } from "../../documents/editor/EditorContext";
 import { renderToStaticMarkup } from "@usewaypoint/email-builder";
 
-// ---------- Types ----------
 type Importance = "Normal" | "High" | "Low";
 interface UserResponse { fullName?: string; email?: string }
-
 type RecipientKind = "email" | "list";
 interface RecipientOption {
   kind: RecipientKind;
-  label: string;   // shown in UI: "Full Name (email)" or "All Members"
-  value: string;   // unique key: email (lowercased) or list key
-  email?: string;  // raw email (for kind === "email")
+  label: string;
+  value: string;
+  email?: string;
 }
 
-// ---------- Constants ----------
 const API_SEND  = "/api/sendEmail.php";
 const API_LISTS = "/api/getMailingLists.php";
 
@@ -51,33 +48,16 @@ const MAILING_LISTS: { key: string; label: string }[] = [
 
 const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
-// ---------- HTML helpers (same tech as your original Send button) ----------
 function minifyHTML(html: string) {
-  return html
-    .replace(/\n/g, "")
-    .replace(/\s\s+/g, " ")
-    .replace(/>\s+</g, "><")
-    .replace(/<!--.*?-->/g, "");
+  return html.replace(/\n/g, "").replace(/\s\s+/g, " ").replace(/>\s+</g, "><").replace(/<!--.*?-->/g, "");
 }
 function minimalEscape(str: string) {
-  return str
-    .replace(/%/g, "%25")
-    .replace(/#/g, "%23")
-    .replace(/&/g, "%26")
-    .replace(/</g, "%3C")
-    .replace(/>/g, "%3E")
-    .replace(/"/g, "%22");
+  return str.replace(/%/g, "%25").replace(/#/g, "%23").replace(/&/g, "%26").replace(/</g, "%3C").replace(/>/g, "%3E").replace(/"/g, "%22");
 }
 function decodeEscapedHtml(escaped: string) {
-  try {
-    const once = decodeURIComponent(escaped);
-    try { return decodeURIComponent(once); } catch { return once; }
-  } catch {
-    return escaped;
-  }
+  try { const once = decodeURIComponent(escaped); try { return decodeURIComponent(once); } catch { return once; } } catch { return escaped; }
 }
 
-// ---------- Option builders ----------
 function listOption(l: {key:string;label:string}): RecipientOption {
   return { kind: "list", label: l.label, value: l.key };
 }
@@ -91,17 +71,10 @@ function useThisAddressOption(input: string): RecipientOption {
   return { kind: "email", label: `Use this address: ${e}`, value: e, email: e };
 }
 
-// default filter (match by name and email)
-const defaultFilter = createFilterOptions<RecipientOption>({
-  stringify: (opt) => `${opt.label} ${opt.value}`,
-});
+const defaultFilter = createFilterOptions<RecipientOption>({ stringify: (opt) => `${opt.label} ${opt.value}` });
 
-// ===================================================================
-// Exported component: IconButton + Modal (self-contained)
-// ===================================================================
 export default function SendEmailModal() {
   const [open, setOpen] = useState(false);
-
   return (
     <>
       <Tooltip title="Send email">
@@ -109,44 +82,36 @@ export default function SendEmailModal() {
           <SendIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-
       {open && <ComposerDialog open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-// ===================================================================
-// Dialog (composer UI)
-// ===================================================================
 function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const document = useDocument();
 
-  // HTML pipeline
   const [escapedHtml, setEscapedHtml] = useState("");
   const [resolvedHtml, setResolvedHtml] = useState("");
 
-  // user + headers
   const [user, setUser] = useState<UserResponse>({});
   const [fromName, setFromName] = useState("Inspire Youth NJ");
+
+  // Hold **pure emails** here
   const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
   const [replyTo, setReplyTo]     = useState("members@inspireyouthnj.org");
+
   const [subject, setSubject]     = useState("");
   const [importance, setImportance] = useState<Importance>("Normal");
 
-  // recipients
   const [to,  setTo]  = useState<RecipientOption[]>([]);
   const [cc,  setCc]  = useState<RecipientOption[]>([]);
   const [bcc, setBcc] = useState<RecipientOption[]>([]);
 
-  // suggestions (people only; lists are separate so we don't duplicate)
   const [peopleSuggestions, setPeopleSuggestions] = useState<RecipientOption[]>([]);
-
-  // misc
   const [snack, setSnack] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Build HTML like original button
   useEffect(() => {
     if (!open) return;
     try {
@@ -161,7 +126,6 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     }
   }, [open, document]);
 
-  // Load user info
   useEffect(() => {
     if (!open) return;
     fetch("/api/user.php")
@@ -173,24 +137,16 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => {});
   }, [open]);
 
-  // Load All Members -> suggestions as "Full Name (email)" (case-insensitive Email/email)
   useEffect(() => {
     if (!open) return;
     fetch(`${API_LISTS}?list=all`)
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
         const members: Array<Record<string, any>> = data?.members || [];
-        const emailsFromMembers = members
-          .map((m) => (m.email || m.Email || m.EMAIL || "").trim())
-          .filter(Boolean);
-
-        const emailsArray: string[] =
-          (Array.isArray(data?.emails) && data.emails.length)
-            ? data.emails
-            : emailsFromMembers;
+        const emailsFromMembers = members.map((m) => (m.email || m.Email || m.EMAIL || "").trim()).filter(Boolean);
+        const emailsArray: string[] = (Array.isArray(data?.emails) && data.emails.length) ? data.emails : emailsFromMembers;
 
         const byEmail = new Map<string, RecipientOption>();
-
         for (const m of members) {
           const e = (m.email || m.Email || m.EMAIL || "").trim();
           if (!e) continue;
@@ -207,7 +163,6 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => setPeopleSuggestions([]));
   }, [open]);
 
-  // Render preview in iframe
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
@@ -215,7 +170,6 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     doc.open(); doc.write(resolvedHtml || ""); doc.close();
   }, [open, resolvedHtml]);
 
-  // Select options
   const fromNameOptions = useMemo(() => {
     const opts = ["Inspire Youth NJ"];
     const ufn = (user?.fullName || "").trim();
@@ -223,54 +177,51 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     return opts;
   }, [user]);
 
-  const fromEmailOptions = useMemo(() => {
-    const staticEmails = [
-      "members@inspireyouthnj.org",
-      "info@inspireyouthnj.org",
-      "important-notifications@inspireyouthnj.org",
-      "noreply@inspireyouthnj.org",
-      "SendFromOutlook-noreply@inspireyouthnj.org",
+  // UI shows friendly label; value stays a pure email
+  const fromEmailChoices = useMemo(() => {
+    const base = [
+      { value: "members@inspireyouthnj.org", label: "members@inspireyouthnj.org" },
+      { value: "info@inspireyouthnj.org", label: "info@inspireyouthnj.org" },
+      { value: "important-notifications@inspireyouthnj.org", label: "important-notifications@inspireyouthnj.org" },
+      { value: "noreply@inspireyouthnj.org", label: "noreply@inspireyouthnj.org" },
+      { value: "SendFromOutlook-noreply@inspireyouthnj.org", label: "Send from Outlook (noreply@inspireyouthnj.org)" },
+      { value: "hugs@inspireyouthnj.org", label: "hugs@inspireyouthnj.org" },
+      { value: "dehugs@iyusa.org", label: "dehugs@iyusa.org" },
     ];
-    const out = [...staticEmails];
-    if (user?.email && !out.includes(user.email)) out.push(user.email);
-    return out;
+    if (user?.email && !base.find(b => b.value === user.email)) {
+      base.push({ value: user.email, label: user.email });
+    }
+    return base;
   }, [user]);
 
-  useEffect(() => {
-    if (!open) return;
-    setReplyTo(prev => (prev === fromEmail ? fromEmail : prev));
-  }, [fromEmail, open]);
+  // Always mirror Reply-To to From email when From changes (you can still override manually later)
+  const handleFromEmailChange = (val: string) => {
+    setFromEmail(val);
+    setReplyTo(val);
+  };
 
-  // Options for To field: lists (once) + people suggestions
   const listOptions = useMemo(() => MAILING_LISTS.map(listOption), []);
   const toOptions   = useMemo(() => [...listOptions, ...peopleSuggestions], [listOptions, peopleSuggestions]);
 
   const isOptionEqualToValue = (a: RecipientOption, b: RecipientOption) =>
     a.kind === b.kind && a.value.toLowerCase() === b.value.toLowerCase();
 
-  // --- smarter filtering for To ---
   function filterToOptions(_options: RecipientOption[], state: { inputValue: string }) {
     const input = (state.inputValue || "").trim();
     const peopleFiltered = defaultFilter(peopleSuggestions, state);
 
     if (input.length > 0) {
-      const matchingLists = listOptions.filter((l) =>
-        l.label.toLowerCase().includes(input.toLowerCase())
-      );
+      const matchingLists = listOptions.filter((l) => l.label.toLowerCase().includes(input.toLowerCase()));
       const emailPrompt = EMAIL_RE.test(input) ? [useThisAddressOption(input)] : [];
-
-      // de-dupe while preserving order
       const seen = new Set<string>();
-      const result = [...matchingLists, ...emailPrompt, ...peopleFiltered].filter(o => {
+      return [...matchingLists, ...emailPrompt, ...peopleFiltered].filter(o => {
         const k = o.kind + ":" + o.value.toLowerCase();
         if (seen.has(k)) return false;
         seen.add(k);
         return true;
       });
-      return result;
     }
 
-    // empty input: lists first, then people
     const seen = new Set<string>();
     return [...listOptions, ...peopleFiltered].filter(o => {
       const k = o.kind + ":" + o.value.toLowerCase();
@@ -280,7 +231,6 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     });
   }
 
-  // normalize chips (freeSolo → email), dedupe
   function onChangeRecipients(
     _e: any,
     value: (RecipientOption | string)[],
@@ -295,7 +245,6 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     setState(Array.from(uniq.values()));
   }
 
-  // send
   const onSend = async () => {
     if (!subject.trim()) return setSnack("Subject is required");
     if (!fromEmail)      return setSnack("From email is required");
@@ -305,26 +254,20 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
 
     setSending(true);
     try {
-      // Build arrays of plain emails only (no names), as requested
       const toEmails  = to.filter(x => x.kind === "email").map(x => x.value);
       const ccEmails  = cc.filter(x => x.kind === "email").map(x => x.value);
       const bccEmails = bcc.filter(x => x.kind === "email").map(x => x.value);
       const listKeys  = to.filter(x => x.kind === "list").map(x => x.value);
-
-      // Preserve the exact chip order for the API to reconstruct "memberX first"
       const toSequence = to.map(x => ({ kind: x.kind, value: x.value }));
 
       const payload = {
         fromName, fromEmail, replyTo, subject, importance,
         html: resolvedHtml,
-        to: toEmails,
-        cc: ccEmails,
-        bcc: bccEmails,
-        selectedLists: listKeys,
-        toSequence,                            // <— order preservation
+        to: toEmails, cc: ccEmails, bcc: bccEmails,
+        selectedLists: listKeys, toSequence,
         user: { fullName: user?.fullName || null, email: user?.email || null },
         source: "iynj-emailbuilder",
-        escapedHtml,                           // optional debug parity
+        escapedHtml,
       };
 
       const res = await fetch(API_SEND, {
@@ -336,8 +279,10 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
 
-      setSnack(`Queued ${data?.sent ?? 1} send(s)`);
-      // setTimeout(onClose, 900);
+      // ✅ Close the modal immediately on success
+      onClose();
+      // (Optional) toast confirmation
+      // setSnack(`Queued ${data?.sent ?? 1} send(s)`);
     } catch (e: any) {
       setSnack(e?.message || "Failed to send");
     } finally {
@@ -345,27 +290,18 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     }
   };
 
-  // ---------- UI ----------
   const fieldSx = { "& .MuiInputBase-root": { borderRadius: 2 } };
   const grayChipSx = { bgcolor: "#e5e7eb", color: "#111827" };
 
   return (
     <>
-      <Dialog
-        open={open}
-        onClose={onClose}
-        fullWidth
-        maxWidth="lg"
-        PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
-      >
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
         <DialogTitle sx={{ fontWeight: 700, bgcolor: "#f8f9fb", borderBottom: "1px solid #eaecef" }}>
           New message
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 2 }}>
-          {/* Stacked like a mail client */}
           <Box sx={{ display: "grid", gap: 1.25 }}>
-            {/* To */}
             <Autocomplete
               multiple
               freeSolo
@@ -381,27 +317,14 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               handleHomeEndKeys
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.kind + ":" + option.value}
-                    label={option.label}
-                    size="small"
-                    sx={grayChipSx}
-                  />
+                  <Chip {...getTagProps({ index })} key={option.kind + ":" + option.value} label={option.label} size="small" sx={grayChipSx} />
                 ))
               }
               renderInput={(params) => (
-                <TextField
-                  {...params}
-                  size="small"
-                  label="To"
-                  placeholder="Type a name/email or choose a list…"
-                  sx={fieldSx}
-                />
+                <TextField {...params} size="small" label="To" placeholder="Type a name/email or choose a list…" sx={fieldSx} />
               )}
             />
 
-            {/* Cc */}
             <Autocomplete
               multiple
               freeSolo
@@ -417,21 +340,12 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               handleHomeEndKeys
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={"cc:"+option.value}
-                    label={option.label}
-                    size="small"
-                    sx={grayChipSx}
-                  />
+                  <Chip {...getTagProps({ index })} key={"cc:"+option.value} label={option.label} size="small" sx={grayChipSx} />
                 ))
               }
-              renderInput={(params) => (
-                <TextField {...params} size="small" label="Cc" placeholder="Add recipients…" sx={fieldSx} />
-              )}
+              renderInput={(params) => <TextField {...params} size="small" label="Cc" placeholder="Add recipients…" sx={fieldSx} />}
             />
 
-            {/* Bcc */}
             <Autocomplete
               multiple
               freeSolo
@@ -447,21 +361,12 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               handleHomeEndKeys
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={"bcc:"+option.value}
-                    label={option.label}
-                    size="small"
-                    sx={grayChipSx}
-                  />
+                  <Chip {...getTagProps({ index })} key={"bcc:"+option.value} label={option.label} size="small" sx={grayChipSx} />
                 ))
               }
-              renderInput={(params) => (
-                <TextField {...params} size="small" label="Bcc" placeholder="Add recipients…" sx={fieldSx} />
-              )}
+              renderInput={(params) => <TextField {...params} size="small" label="Bcc" placeholder="Add recipients…" sx={fieldSx} />}
             />
 
-            {/* From name */}
             <FormControl size="small">
               <InputLabel>From name</InputLabel>
               <Select label="From name" value={fromName} onChange={(e) => setFromName(e.target.value)}>
@@ -471,43 +376,35 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               </Select>
             </FormControl>
 
-            {/* From email */}
+            {/* From email (value is pure email) */}
             <FormControl size="small">
               <InputLabel>From email</InputLabel>
-              <Select label="From email" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}>
-                {fromEmailOptions.map(opt => (
-                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+              <Select
+                label="From email"
+                value={fromEmail}
+                onChange={(e) => handleFromEmailChange(e.target.value as string)}  // sync Reply-To here
+              >
+                {fromEmailChoices.map(opt => (
+                  <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {/* Reply-To */}
+            {/* Reply-To (defaults to From email; user can override) */}
             <FormControl size="small">
               <InputLabel>Reply-To</InputLabel>
               <Select label="Reply-To" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}>
-                {fromEmailOptions.map(opt => (
-                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                {fromEmailChoices.map(opt => (
+                  <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {/* Subject */}
-            <TextField
-              size="small"
-              label="Subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              sx={fieldSx}
-            />
+            <TextField size="small" label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} sx={fieldSx} />
 
-            {/* Importance */}
             <FormControl size="small">
               <InputLabel>Importance</InputLabel>
-              <Select
-                label="Importance"
-                value={importance}
-                onChange={(e) => setImportance(e.target.value as Importance)}
-              >
+              <Select label="Importance" value={importance} onChange={(e) => setImportance(e.target.value as Importance)}>
                 <MenuItem value="Normal">Normal</MenuItem>
                 <MenuItem value="High">High</MenuItem>
                 <MenuItem value="Low">Low</MenuItem>
@@ -515,7 +412,6 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             </FormControl>
           </Box>
 
-          {/* Preview */}
           <Box mt={2}>
             {resolvedHtml ? (
               <Paper variant="outlined" sx={{ height: 420, overflow: "hidden", borderRadius: 2 }}>
