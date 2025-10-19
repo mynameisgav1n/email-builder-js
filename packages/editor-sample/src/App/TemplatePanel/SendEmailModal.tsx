@@ -181,10 +181,10 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
         const members: Array<{fullName?: string; email?: string}> = data?.members || [];
-        const emails: string[] = data?.emails || members.map(m => m.email).filter(Boolean);
+        const emails: string[] = data?.emails || members.map(m => m.Email).filter(Boolean);
         const byEmail = new Map<string, RecipientOption>();
         for (const m of members) {
-          const e = (m.email || "").trim();
+          const e = (m.Email || "").trim();
           if (!e) continue;
           byEmail.set(e.toLowerCase(), emailOption(e, m.fullName));
         }
