@@ -340,7 +340,7 @@ function ComposerDialog({
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
         <DialogTitle sx={{ fontWeight: 700, bgcolor: "#f8f9fb", borderBottom: "1px solid #eaecef" }}>
-          New message
+          New Email
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 2 }}>
