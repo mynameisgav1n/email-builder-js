@@ -228,7 +228,7 @@ function ComposerDialog({
       { value: "info@inspireyouthnj.org", label: "info@inspireyouthnj.org" },
       { value: "important-notifications@inspireyouthnj.org", label: "important-notifications@inspireyouthnj.org" },
       { value: "noreply@inspireyouthnj.org", label: "noreply@inspireyouthnj.org" },
-      { value: "SendFromOutlook-noreply@inspireyouthnj.org", label: "Send from Outlook (noreply@inspireyouthnj.org)" },
+      {/*{ value: "SendFromOutlook-noreply@inspireyouthnj.org", label: "Send from Outlook (noreply@inspireyouthnj.org)" },*/}
       { value: "hugs@inspireyouthnj.org", label: "hugs@inspireyouthnj.org" },
       { value: "dehugs@iyusa.org", label: "dehugs@iyusa.org" },
     ];
