@@ -220,6 +220,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       "info@inspireyouthnj.org",
       "important-notifications@inspireyouthnj.org",
       "noreply@inspireyouthnj.org",
+      "Send from Outlook (noreply@inspireyouthnj.org)",
     ];
     const out = [...staticEmails];
     if (user?.email && !out.includes(user.email)) out.push(user.email);
