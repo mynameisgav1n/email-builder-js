@@ -32,7 +32,7 @@ import JsonPanel from './JsonPanel';
 import MainTabsGroup from './MainTabsGroup';
 import ShortenButton from './ShortenButton';
 import SaveButton from './SaveButton';
-import SendButton from './SendButton';
+//import SendButton from './SendButton';
 import SendEmailButton from './SendEmailModal';
 
 export default function TemplatePanel() {
@@ -143,7 +143,7 @@ export default function TemplatePanel() {
             </ToggleButtonGroup>
             <ShortenButton />
             <SaveButton />
-            <SendButton />
+            {/*<SendButton />*/}
             <SendEmailButton />
           </Stack>
         </Stack>
