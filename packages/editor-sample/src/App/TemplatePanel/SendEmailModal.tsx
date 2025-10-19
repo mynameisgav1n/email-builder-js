@@ -52,7 +52,13 @@ function minifyHTML(html: string) {
   return html.replace(/\n/g, "").replace(/\s\s+/g, " ").replace(/>\s+</g, "><").replace(/<!--.*?-->/g, "");
 }
 function minimalEscape(str: string) {
-  return str.replace(/%/g, "%25").replace(/#/g, "%23").replace(/&/g, "%26").replace(/</g, "%3C").replace(/>/g, "%3E").replace(/"/g, "%22");
+  return str
+    .replace(/%/g, "%25")
+    .replace(/#/g, "%23")
+    .replace(/&/g, "%26")
+    .replace(/</g, "%3C")
+    .replace(/>/g, "%3E")
+    .replace(/"/g, "%22");
 }
 function decodeEscapedHtml(escaped: string) {
   try { const once = decodeURIComponent(escaped); try { return decodeURIComponent(once); } catch { return once; } } catch { return escaped; }
@@ -73,8 +79,13 @@ function useThisAddressOption(input: string): RecipientOption {
 
 const defaultFilter = createFilterOptions<RecipientOption>({ stringify: (opt) => `${opt.label} ${opt.value}` });
 
+/** Parent wrapper: owns Snackbar so it shows even after the dialog closes */
 export default function SendEmailModal() {
   const [open, setOpen] = useState(false);
+  const [snack, setSnack] = useState<string | null>(null);
+
+  const notify = (msg: string) => setSnack(msg);
+
   return (
     <>
       <Tooltip title="Send email">
@@ -82,12 +93,36 @@ export default function SendEmailModal() {
           <SendIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-      {open && <ComposerDialog open={open} onClose={() => setOpen(false)} />}
+
+      {open && (
+        <ComposerDialog
+          open={open}
+          onClose={() => setOpen(false)}
+          notify={notify}
+        />
+      )}
+
+      <Snackbar
+        open={!!snack}
+        message={snack || ""}
+        autoHideDuration={5000}
+        onClose={() => setSnack(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      />
     </>
   );
 }
 
-function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** The dialog itself */
+function ComposerDialog({
+  open,
+  onClose,
+  notify,
+}: {
+  open: boolean;
+  onClose: () => void;
+  notify: (msg: string) => void;
+}) {
   const document = useDocument();
 
   const [escapedHtml, setEscapedHtml] = useState("");
@@ -98,7 +133,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
 
   // Hold **pure emails** here
   const [fromEmail, setFromEmail] = useState("members@inspireyouthnj.org");
-  const [replyTo, setReplyTo]     = useState("members@inspireyouthnj.org");
+  const [replyTo, setReplyTo]     = useState("info@inspireyouthnj.org");
 
   const [subject, setSubject]     = useState("");
   const [importance, setImportance] = useState<Importance>("Normal");
@@ -108,10 +143,12 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   const [bcc, setBcc] = useState<RecipientOption[]>([]);
 
   const [peopleSuggestions, setPeopleSuggestions] = useState<RecipientOption[]>([]);
-  const [snack, setSnack] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [inlineSnack, setInlineSnack] = useState<string | null>(null); // inline warnings while dialog open
+
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
+  // Build HTML exactly like your original Send button
   useEffect(() => {
     if (!open) return;
     try {
@@ -122,21 +159,22 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       setEscapedHtml(escaped);
       setResolvedHtml(decoded);
     } catch {
-      setSnack("Failed to render HTML.");
+      setInlineSnack("Failed to render HTML.");
     }
   }, [open, document]);
 
+  // Load user
   useEffect(() => {
     if (!open) return;
     fetch("/api/user.php")
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then((u: UserResponse) => {
         setUser(u || {});
-        if (u?.email) setReplyTo(u.email);
       })
       .catch(() => {});
   }, [open]);
 
+  // Load suggestions from All Members
   useEffect(() => {
     if (!open) return;
     fetch(`${API_LISTS}?list=all`)
@@ -163,6 +201,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => setPeopleSuggestions([]));
   }, [open]);
 
+  // Render preview
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
@@ -170,14 +209,19 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     doc.open(); doc.write(resolvedHtml || ""); doc.close();
   }, [open, resolvedHtml]);
 
+  // From name choices (now includes Healing Hugs variants)
   const fromNameOptions = useMemo(() => {
-    const opts = ["Inspire Youth NJ"];
+    const opts = ["Inspire Youth NJ", "Healing Hugs"];
     const ufn = (user?.fullName || "").trim();
-    if (ufn) { opts.push(`${ufn} (Inspire Youth NJ)`); opts.push(ufn); }
+    if (ufn) {
+      opts.push(`${ufn} (Inspire Youth NJ)`);
+      opts.push(`${ufn} (Healing Hugs)`);
+      opts.push(ufn);
+    }
     return opts;
   }, [user]);
 
-  // UI shows friendly label; value stays a pure email
+  // From email menu: values stay pure emails. Keep your Outlook label value as-is.
   const fromEmailChoices = useMemo(() => {
     const base = [
       { value: "members@inspireyouthnj.org", label: "members@inspireyouthnj.org" },
@@ -194,7 +238,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     return base;
   }, [user]);
 
-  // Always mirror Reply-To to From email when From changes (you can still override manually later)
+  // Keep Reply-To in sync with From email by default; user can override later.
   const handleFromEmailChange = (val: string) => {
     setFromEmail(val);
     setReplyTo(val);
@@ -246,11 +290,11 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   }
 
   const onSend = async () => {
-    if (!subject.trim()) return setSnack("Subject is required");
-    if (!fromEmail)      return setSnack("From email is required");
-    if (!fromName)       return setSnack("From name is required");
-    if (!resolvedHtml.trim()) return setSnack("Email HTML is empty");
-    if (to.length === 0) return setSnack("Please add at least one recipient in To");
+    if (!subject.trim()) return setInlineSnack("Subject is required");
+    if (!fromEmail)      return setInlineSnack("From email is required");
+    if (!fromName)       return setInlineSnack("From name is required");
+    if (!resolvedHtml.trim()) return setInlineSnack("Email HTML is empty");
+    if (to.length === 0) return setInlineSnack("Please add at least one recipient in To");
 
     setSending(true);
     try {
@@ -279,12 +323,11 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || "Unknown error");
 
-      // ✅ Close the modal immediately on success
+      // Show success in parent snackbar, then close modal
+      notify(`Queued ${data?.sent ?? 1} send(s)`);
       onClose();
-      // (Optional) toast confirmation
-      // setSnack(`Queued ${data?.sent ?? 1} send(s)`);
     } catch (e: any) {
-      setSnack(e?.message || "Failed to send");
+      setInlineSnack(e?.message || "Failed to send");
     } finally {
       setSending(false);
     }
@@ -302,6 +345,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
 
         <DialogContent dividers sx={{ p: 2 }}>
           <Box sx={{ display: "grid", gap: 1.25 }}>
+            {/* To */}
             <Autocomplete
               multiple
               freeSolo
@@ -325,6 +369,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               )}
             />
 
+            {/* Cc */}
             <Autocomplete
               multiple
               freeSolo
@@ -346,6 +391,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               renderInput={(params) => <TextField {...params} size="small" label="Cc" placeholder="Add recipients…" sx={fieldSx} />}
             />
 
+            {/* Bcc */}
             <Autocomplete
               multiple
               freeSolo
@@ -367,6 +413,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               renderInput={(params) => <TextField {...params} size="small" label="Bcc" placeholder="Add recipients…" sx={fieldSx} />}
             />
 
+            {/* From name */}
             <FormControl size="small">
               <InputLabel>From name</InputLabel>
               <Select label="From name" value={fromName} onChange={(e) => setFromName(e.target.value)}>
@@ -382,7 +429,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               <Select
                 label="From email"
                 value={fromEmail}
-                onChange={(e) => handleFromEmailChange(e.target.value as string)}  // sync Reply-To here
+                onChange={(e) => handleFromEmailChange(e.target.value as string)}
               >
                 {fromEmailChoices.map(opt => (
                   <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
@@ -390,7 +437,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               </Select>
             </FormControl>
 
-            {/* Reply-To (defaults to From email; user can override) */}
+            {/* Reply-To (syncs from From email, but user can override) */}
             <FormControl size="small">
               <InputLabel>Reply-To</InputLabel>
               <Select label="Reply-To" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}>
@@ -400,8 +447,8 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               </Select>
             </FormControl>
 
+            {/* Subject & Importance */}
             <TextField size="small" label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} sx={fieldSx} />
-
             <FormControl size="small">
               <InputLabel>Importance</InputLabel>
               <Select label="Importance" value={importance} onChange={(e) => setImportance(e.target.value as Importance)}>
@@ -412,6 +459,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             </FormControl>
           </Box>
 
+          {/* Preview */}
           <Box mt={2}>
             {resolvedHtml ? (
               <Paper variant="outlined" sx={{ height: 420, overflow: "hidden", borderRadius: 2 }}>
@@ -433,11 +481,12 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
         </DialogActions>
       </Dialog>
 
+      {/* Inline-only alerts while dialog is open (errors/validation). Success uses parent Snackbar. */}
       <Snackbar
-        open={!!snack}
-        message={snack || ""}
-        autoHideDuration={5000}
-        onClose={() => setSnack(null)}
+        open={!!inlineSnack}
+        message={inlineSnack || ""}
+        autoHideDuration={4000}
+        onClose={() => setInlineSnack(null)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       />
     </>
