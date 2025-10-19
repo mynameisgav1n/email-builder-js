@@ -25,41 +25,60 @@ import SendIcon from "@mui/icons-material/Send";
 import { useDocument } from "../../documents/editor/EditorContext";
 import { renderToStaticMarkup } from "@usewaypoint/email-builder";
 
+// ---------- Types ----------
 type Importance = "Normal" | "High" | "Low";
 interface UserResponse { fullName?: string; email?: string }
 
 type RecipientKind = "email" | "list";
 interface RecipientOption {
   kind: RecipientKind;
-  label: string;   // what user sees: "Full Name (email)" or "All Members"
+  label: string;   // shown in UI: "Full Name (email)" or "All Members"
   value: string;   // unique key: email or list key (lowercase for email)
-  email?: string;  // raw email for email-kind
+  email?: string;  // raw email (for kind === "email")
 }
 
+// ---------- Constants ----------
 const API_SEND  = "/api/sendEmail.php";
 const API_LISTS = "/api/getMailingLists.php";
 
-function minifyHTML(html: string) {
-  return html.replace(/\n/g, "").replace(/\s\s+/g, " ").replace(/>\s+</g, "><").replace(/<!--.*?-->/g, "");
-}
-function minimalEscape(str: string) {
-  return str.replace(/%/g, "%25").replace(/#/g, "%23").replace(/&/g, "%26").replace(/</g, "%3C").replace(/>/g, "%3E").replace(/"/g, "%22");
-}
-function decodeEscapedHtml(escaped: string) {
-  try { const once = decodeURIComponent(escaped); try { return decodeURIComponent(once); } catch { return once; } } catch { return escaped; }
-}
+const MAILING_LISTS: { key: string; label: string }[] = [
+  { key: "all",         label: "All Members" },
+  { key: "general",     label: "General Emails" },
+  { key: "promotional", label: "Promotional Emails" },
+  { key: "surveys",     label: "Surveys" },
+  { key: "event",       label: "Event Emails" },
+  { key: "beehiiv",     label: "Newsletter Subscribers" },
+];
 
 const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
-const MAILING_LISTS: { key: string; label: string }[] = [
-  { key: "all",       label: "All Members" },
-  { key: "general",   label: "General Emails" },
-  { key: "promotional", label: "Promotional Emails" },
-  { key: "surveys",   label: "Surveys" },
-  { key: "event",     label: "Event Emails" },
-  { key: "beehiiv",   label: "Newsletter Subscribers" },
-];
+// ---------- HTML helpers (same tech as your original Send button) ----------
+function minifyHTML(html: string) {
+  return html
+    .replace(/\n/g, "")
+    .replace(/\s\s+/g, " ")
+    .replace(/>\s+</g, "><")
+    .replace(/<!--.*?-->/g, "");
+}
+function minimalEscape(str: string) {
+  return str
+    .replace(/%/g, "%25")
+    .replace(/#/g, "%23")
+    .replace(/&/g, "%26")
+    .replace(/</g, "%3C")
+    .replace(/>/g, "%3E")
+    .replace(/"/g, "%22");
+}
+function decodeEscapedHtml(escaped: string) {
+  try {
+    const once = decodeURIComponent(escaped);
+    try { return decodeURIComponent(once); } catch { return once; }
+  } catch {
+    return escaped;
+  }
+}
 
+// ---------- Option builders ----------
 function listOption(l: {key:string;label:string}): RecipientOption {
   return { kind: "list", label: l.label, value: l.key };
 }
@@ -73,13 +92,17 @@ function useThisAddressOption(input: string): RecipientOption {
   return { kind: "email", label: `Use this address: ${e}`, value: e, email: e };
 }
 
-// ----- Use MUI's filtering so typing narrows suggestions by name OR email
+// default filter (match by name and email)
 const defaultFilter = createFilterOptions<RecipientOption>({
-  stringify: (opt) => `${opt.label} ${opt.value}`, // lets it match on both name and email
+  stringify: (opt) => `${opt.label} ${opt.value}`,
 });
 
-export default function SendEmailButton() {
+// ===================================================================
+// Exported component: IconButton + Modal (kept self-contained)
+// ===================================================================
+export default function SendEmailModal() {
   const [open, setOpen] = useState(false);
+
   return (
     <>
       <Tooltip title="Send email">
@@ -87,15 +110,19 @@ export default function SendEmailButton() {
           <SendIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+
       {open && <ComposerDialog open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
+// ===================================================================
+// Dialog (composer UI)
+// ===================================================================
 function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const document = useDocument();
 
-  // HTML
+  // HTML pipeline
   const [escapedHtml, setEscapedHtml] = useState("");
   const [resolvedHtml, setResolvedHtml] = useState("");
 
@@ -112,7 +139,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   const [cc,  setCc]  = useState<RecipientOption[]>([]);
   const [bcc, setBcc] = useState<RecipientOption[]>([]);
 
-  // suggestions: people only (lists handled separately so they don't duplicate)
+  // suggestions (people only; lists are separate so we don't duplicate)
   const [peopleSuggestions, setPeopleSuggestions] = useState<RecipientOption[]>([]);
 
   // misc
@@ -120,7 +147,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
   const [sending, setSending] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // build HTML like original
+  // Build HTML like original button
   useEffect(() => {
     if (!open) return;
     try {
@@ -135,7 +162,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     }
   }, [open, document]);
 
-  // user
+  // Load user info
   useEffect(() => {
     if (!open) return;
     fetch("/api/user.php")
@@ -147,7 +174,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => {});
   }, [open]);
 
-  // load All Members once dialog opens -> suggestions "Full Name (email)"
+  // Load All Members -> suggestions as "Full Name (email)"
   useEffect(() => {
     if (!open) return;
     fetch(`${API_LISTS}?list=all`)
@@ -171,7 +198,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       .catch(() => setPeopleSuggestions([]));
   }, [open]);
 
-  // preview
+  // Render preview
   useEffect(() => {
     if (!open || !iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
@@ -179,6 +206,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     doc.open(); doc.write(resolvedHtml || ""); doc.close();
   }, [open, resolvedHtml]);
 
+  // Select options
   const fromNameOptions = useMemo(() => {
     const opts = ["Inspire Youth NJ"];
     const ufn = (user?.fullName || "").trim();
@@ -186,7 +214,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     return opts;
   }, [user]);
 
-  const emailOptions = useMemo(() => {
+  const fromEmailOptions = useMemo(() => {
     const staticEmails = [
       "members@inspireyouthnj.org",
       "info@inspireyouthnj.org",
@@ -203,50 +231,49 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     setReplyTo(prev => (prev === fromEmail ? fromEmail : prev));
   }, [fromEmail, open]);
 
-  // lists once, people suggestions separately (prevents duplicates)
+  // Options for To field: lists (once) + people suggestions
   const listOptions = useMemo(() => MAILING_LISTS.map(listOption), []);
   const toOptions = useMemo(() => [...listOptions, ...peopleSuggestions], [listOptions, peopleSuggestions]);
 
   const isOptionEqualToValue = (a: RecipientOption, b: RecipientOption) =>
     a.kind === b.kind && a.value.toLowerCase() === b.value.toLowerCase();
 
-  // use MUI filter + our tweaks
-  function filterOptions(options: RecipientOption[], state: any) {
-    // Apply default filtering to all options (lists + people)
-    let filtered = defaultFilter(options, state);
-
+  // --- smarter filtering for To ---
+  function filterToOptions(_options: RecipientOption[], state: { inputValue: string }) {
     const input = (state.inputValue || "").trim();
-    if (EMAIL_RE.test(input)) {
-      const useAddr = useThisAddressOption(input);
-      // Add "Use this address" on top (after lists), avoid dupes
-      const dedup = new Map<string, RecipientOption>(
-        filtered.map(o => [o.kind + ":" + o.value, o])
+
+    // people filtered by name/email
+    const peopleFiltered = defaultFilter(peopleSuggestions, state);
+
+    // typing: show people; include lists only if they match text
+    if (input.length > 0) {
+      const matchingLists = listOptions.filter((l) =>
+        l.label.toLowerCase().includes(input.toLowerCase())
       );
-      dedup.set("email:" + useAddr.value, useAddr);
+      const emailPrompt = EMAIL_RE.test(input) ? [useThisAddressOption(input)] : [];
 
-      // Ensure lists remain at the very top:
-      const lists = listOptions.filter(l => !dedup.has(l.kind + ":" + l.value));
-      const rest  = Array.from(dedup.values()).filter(o => o.kind !== "list");
-      filtered = [...listOptions, ...rest]; // lists first, then rest (which includes the “use this”)
-      // Note: `listOptions` are already included in options and therefore in filtered; this restacking just pins them.
-    } else {
-      // pin lists to top for discoverability
-      const nonLists = filtered.filter(o => o.kind !== "list");
-      filtered = [...listOptions, ...nonLists];
+      // dedupe while preserving order
+      const seen = new Set<string>();
+      const result = [...matchingLists, ...emailPrompt, ...peopleFiltered].filter(o => {
+        const k = o.kind + ":" + o.value.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      return result;
     }
 
-    // Remove duplicates by kind+value while preserving order
+    // empty input: lists first, then people (unique)
     const seen = new Set<string>();
-    const unique: RecipientOption[] = [];
-    for (const o of filtered) {
-      const key = o.kind + ":" + o.value;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      unique.push(o);
-    }
-    return unique;
+    return [...listOptions, ...peopleFiltered].filter(o => {
+      const k = o.kind + ":" + o.value.toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
   }
 
+  // normalize chips, allow freeSolo emails, dedupe
   function onChangeRecipients(
     _e: any,
     value: (RecipientOption | string)[],
@@ -261,6 +288,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     setState(Array.from(uniq.values()));
   }
 
+  // expand list(s) to emails via API
   async function expandList(key: string): Promise<string[]> {
     const r = await fetch(`${API_LISTS}?list=${encodeURIComponent(key)}`);
     if (!r.ok) throw new Error(`List fetch failed: ${key}`);
@@ -278,6 +306,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     return Array.from(emails);
   }
 
+  // send
   const onSend = async () => {
     if (!subject.trim()) return setSnack("Subject is required");
     if (!fromEmail) return setSnack("From email is required");
@@ -294,6 +323,7 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
       ]);
 
       const dedupe = (xs: string[]) => Array.from(new Set(xs.map(x => x.toLowerCase())));
+
       const payload = {
         fromName,
         fromEmail,
@@ -328,12 +358,19 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
     }
   };
 
+  // ---------- UI ----------
   const fieldSx = { "& .MuiInputBase-root": { borderRadius: 2 } };
   const grayChipSx = { bgcolor: "#e5e7eb", color: "#111827" };
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="lg"
+        PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+      >
         <DialogTitle sx={{ fontWeight: 700, bgcolor: "#f8f9fb", borderBottom: "1px solid #eaecef" }}>
           New message
         </DialogTitle>
@@ -345,8 +382,8 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <Autocomplete
               multiple
               freeSolo
-              filterOptions={filterOptions as any}
               options={toOptions}
+              filterOptions={filterToOptions as any}
               isOptionEqualToValue={isOptionEqualToValue}
               value={to}
               onChange={(e, v) => onChangeRecipients(e, v, setTo)}
@@ -367,7 +404,13 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
                 ))
               }
               renderInput={(params) => (
-                <TextField {...params} size="small" label="To" placeholder="Type a name/email or choose a list…" sx={fieldSx} />
+                <TextField
+                  {...params}
+                  size="small"
+                  label="To"
+                  placeholder="Type a name/email or choose a list…"
+                  sx={fieldSx}
+                />
               )}
             />
 
@@ -387,7 +430,13 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               handleHomeEndKeys
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip {...getTagProps({ index })} key={"cc:"+option.value} label={option.label} size="small" sx={grayChipSx} />
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={"cc:"+option.value}
+                    label={option.label}
+                    size="small"
+                    sx={grayChipSx}
+                  />
                 ))
               }
               renderInput={(params) => (
@@ -411,7 +460,13 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
               handleHomeEndKeys
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip {...getTagProps({ index })} key={"bcc:"+option.value} label={option.label} size="small" sx={grayChipSx} />
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={"bcc:"+option.value}
+                    label={option.label}
+                    size="small"
+                    sx={grayChipSx}
+                  />
                 ))
               }
               renderInput={(params) => (
@@ -433,8 +488,9 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <FormControl size="small">
               <InputLabel>From email</InputLabel>
               <Select label="From email" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}>
-                {([ "members@inspireyouthnj.org","info@inspireyouthnj.org","important-notifications@inspireyouthnj.org","noreply@inspireyouthnj.org", user?.email ].filter(Boolean) as string[])
-                  .map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+                {fromEmailOptions.map(opt => (
+                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
               </Select>
             </FormControl>
 
@@ -442,18 +498,29 @@ function ComposerDialog({ open, onClose }: { open: boolean; onClose: () => void 
             <FormControl size="small">
               <InputLabel>Reply-To</InputLabel>
               <Select label="Reply-To" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}>
-                {([ "members@inspireyouthnj.org","info@inspireyouthnj.org","important-notifications@inspireyouthnj.org","noreply@inspireyouthnj.org", user?.email ].filter(Boolean) as string[])
-                  .map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+                {fromEmailOptions.map(opt => (
+                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
               </Select>
             </FormControl>
 
             {/* Subject */}
-            <TextField size="small" label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} sx={fieldSx} />
+            <TextField
+              size="small"
+              label="Subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              sx={fieldSx}
+            />
 
             {/* Importance */}
             <FormControl size="small">
               <InputLabel>Importance</InputLabel>
-              <Select label="Importance" value={importance} onChange={(e) => setImportance(e.target.value as Importance)}>
+              <Select
+                label="Importance"
+                value={importance}
+                onChange={(e) => setImportance(e.target.value as Importance)}
+              >
                 <MenuItem value="Normal">Normal</MenuItem>
                 <MenuItem value="High">High</MenuItem>
                 <MenuItem value="Low">Low</MenuItem>
