@@ -38,12 +38,12 @@ const API_SEND  = "/api/sendEmail.php";
 const API_LISTS = "/api/getMailingLists.php";
 
 const MAILING_LISTS: { key: string; label: string }[] = [
+  { key: "general",     label: "General Emails (Default)" },
   { key: "all",         label: "All Members" },
-  { key: "general",     label: "General Emails" },
   { key: "promotional", label: "Promotional Emails" },
   { key: "surveys",     label: "Surveys" },
   { key: "event",       label: "Event Emails" },
-  { key: "beehiiv",     label: "Newsletter Subscribers" },
+  { key: "beehiiv",     label: "Newsletter Subscribers (Beehiiv)" },
 ];
 
 const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
