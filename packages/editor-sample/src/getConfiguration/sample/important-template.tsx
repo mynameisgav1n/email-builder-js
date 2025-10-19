@@ -53,7 +53,7 @@ const IMPORTANT_TEMPLATE: TEditorConfiguration = {
       },
       props: {
         markdown: true,
-        text: `Hey [[NAME]]! 👋
+        text: `Hey [[FIRST]]! 👋
 
 This is an **important** email template. Feel free to edit it!
 
