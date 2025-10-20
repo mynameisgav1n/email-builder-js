@@ -148,6 +148,10 @@ function ComposerDialog({
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
+  // NEW: list counts state
+  const [listCounts, setListCounts] = useState<Record<string, number>>({}); // key -> count
+  const [listCountsLoading, setListCountsLoading] = useState(false);        // optional UI hook
+
   // Build HTML exactly like your original Send button
   useEffect(() => {
     if (!open) return;
@@ -201,6 +205,37 @@ function ComposerDialog({
       .catch(() => setPeopleSuggestions([]));
   }, [open]);
 
+  // NEW: fetch counts for all lists when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setListCountsLoading(true);
+        const results = await Promise.all(
+          MAILING_LISTS.map(async (l) => {
+            try {
+              const res = await fetch(`${API_LISTS}?list=${encodeURIComponent(l.key)}`);
+              if (!res.ok) throw new Error(String(res.status));
+              const json = await res.json();
+              // Both branches return "count" in your APIs
+              const count = Number(json?.count ?? 0) || 0;
+              return [l.key, count] as const;
+            } catch {
+              return [l.key, 0] as const;
+            }
+          })
+        );
+        if (!cancelled) {
+          setListCounts(results.reduce<Record<string, number>>((acc, [k, c]) => (acc[k] = c, acc), {}));
+        }
+      } finally {
+        if (!cancelled) setListCountsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
+
   // Render preview
   useEffect(() => {
     if (!open || !iframeRef.current) return;
@@ -246,7 +281,19 @@ function ComposerDialog({
     setReplyTo(val);
   };
 
-  const listOptions = useMemo(() => MAILING_LISTS.map(listOption), []);
+  // NEW: build list options with counts in the label
+  const listOptions = useMemo(() => {
+    const decorated = MAILING_LISTS.map((l) => {
+      const count = listCounts[l.key];
+      const suffix =
+        typeof count === "number"
+          ? ` — ${count.toLocaleString()}`
+          : (listCountsLoading ? " — …" : "");
+      return listOption({ key: l.key, label: `${l.label}${suffix}` });
+    });
+    return decorated;
+  }, [listCounts, listCountsLoading]);
+
   const toOptions   = useMemo(() => [...listOptions, ...peopleSuggestions], [listOptions, peopleSuggestions]);
 
   const isOptionEqualToValue = (a: RecipientOption, b: RecipientOption) =>
